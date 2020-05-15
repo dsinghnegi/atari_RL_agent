@@ -1,2 +1,2 @@
-# attari_RL_agent
-RL based agent for attari games
+#Attar RL agent
+Reinforcement learining based agent for playingattari games
