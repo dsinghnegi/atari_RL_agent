@@ -1,14 +1,3 @@
-from framebuffer import FrameBuffer
-
-def make_env(clip_rewards=True, seed=None):
-    env = gym.make(ENV_NAME)  # create raw env
-    if seed is not None:
-        env.seed(seed)
-    env = PrimaryAtariWrap(env, clip_rewards)
-    env = FrameBuffer(env, n_frames=4, dim_order='pytorch')
-    return env
-
-
 
 def evaluate(env, agent, n_games=1, greedy=False, t_max=10000):
     """ Plays n_games full games. If greedy, picks actions as argmax(qvalues). Returns mean reward. """

@@ -1,8 +1,13 @@
+import gym
 from gym.core import ObservationWrapper
 from gym.spaces import Box
 import cv2
 
-import atari_wrappers
+from preprocessing.framebuffer import FrameBuffer
+from preprocessing import atari_wrappers
+
+ENV_NAME='BreakoutNoFrameskip-v4'
+
 
 class PreprocessAtariObs(ObservationWrapper):
     def __init__(self, env):
@@ -64,3 +69,11 @@ def PrimaryAtariWrap(env, clip_rewards=True):
     env = PreprocessAtariObs(env)
     return env
 
+
+def make_env(clip_rewards=True, seed=None):
+    env = gym.make(ENV_NAME)  # create raw env
+    if seed is not None:
+        env.seed(seed)
+    env = PrimaryAtariWrap(env, clip_rewards)
+    env = FrameBuffer(env, n_frames=4, dim_order='pytorch')
+    return env
