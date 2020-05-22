@@ -1,9 +1,14 @@
 import os
-from tqdm import tqdm
 import argparse
 
-from preprocessing import BreakoutNoFrameskip as BNF
+from tqdm import tqdm
+import torch
 
+from models.dqn import DQNAgent
+from preprocessing import BreakoutNoFrameskip as BNF
+from utils.replay_buffer import ReplayBuffer
+from utils import utils
+from utils.helper import play_and_record, compute_td_loss, evaluate
 
 ENV_LIST=['BreakoutNoFrameskip-v4']
 
@@ -14,22 +19,9 @@ def get_args():
 	return opt
 
 
-
-def main():
-	opt=get_args()	
-
-	assert opt.environment in ENV_LIST, \
-		"Unsupported environment: {} \nSupported environemt: {}".format(opt.environment, ENV_LIST)
-
-
-	env = BNF.make_env()
-	state_shape = env.observation_space.shape
-	n_actions = env.action_space.n
+def train(env,agent,target_network,device):
 	state = env.reset()
 
-	agent = DQNAgent(state_shape, n_actions, epsilon=1).to(device)
-	target_network = DQNAgent(state_shape, n_actions).to(device)
-	target_network.load_state_dict(agent.state_dict())
 
 	exp_replay = ReplayBuffer(10**4)
 	for i in range(100):
@@ -44,8 +36,9 @@ def main():
 		play_and_record(state, agent, env, exp_replay, n_steps=10**2)
 		if len(exp_replay) == 10**4:
 			break
-	print(len(exp_replay))
 
+
+	print("Experience Reply buffer : {}".format(len(exp_replay)))
 
 	timesteps_per_epoch = 1
 	batch_size = 16
@@ -78,89 +71,118 @@ def main():
 	states, actions, rewards, next_states, is_done=exp_replay.sample(batch_size)
 
 	loss = compute_td_loss(states, actions, rewards, next_states, is_done,
-	        agent, target_network,
-	        gamma=0.99,
-	        check_shapes=False,
-	        device=device)
+			agent, target_network,
+			gamma=0.99,
+			check_shapes=False,
+			device=device)
 
-	evaluate(make_env(clip_rewards=True, seed=444), agent, n_games=3 * n_lives, greedy=True)
+
+	score=evaluate(make_env(clip_rewards=True, seed=444), agent, n_games=3 * n_lives, greedy=True)
+	print("Score without training: {}".format(score))
+
+	
 
 	state = env.reset()
-for step in trange(step, total_steps + 1):
-    if not utils.is_enough_ram():
-        print('less that 100 Mb RAM available, freezing')
-        print('make sure everythin is ok and make KeyboardInterrupt to continue')
-        try:
-            while True:
-                pass
-        except KeyboardInterrupt:
-            pass
+	for step in trange(step, total_steps + 1):
+		if not utils.is_enough_ram():
+			print('less that 100 Mb RAM available, freezing')
+			print('make sure everythin is ok and make KeyboardInterrupt to continue')
+			try:
+				while True:
+					pass
+			except KeyboardInterrupt:
+				pass
 
-    agent.epsilon = utils.linear_decay(init_epsilon, final_epsilon, step, decay_steps)
+		agent.epsilon = utils.linear_decay(init_epsilon, final_epsilon, step, decay_steps)
 
-    # play
-    _, state = play_and_record(state, agent, env, exp_replay, timesteps_per_epoch)
+		# play
+		_, state = play_and_record(state, agent, env, exp_replay, timesteps_per_epoch)
 
-    # train
-    states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn=exp_replay.sample(batch_size)
+		# train
+		states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn=exp_replay.sample(batch_size)
 
-    loss = compute_td_loss(states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,
-                    agent, target_network,
-                    gamma=0.99,
-                    check_shapes=False,
-                    device=device)
+		loss = compute_td_loss(states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,
+						agent, target_network,
+						gamma=0.99,
+						check_shapes=False,
+						device=device)
 
-    loss.backward()
-    grad_norm = nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
-    opt.step()
-    opt.zero_grad()
+		loss.backward()
+		grad_norm = nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
+		opt.step()
+		opt.zero_grad()
 
-    if step % loss_freq == 0:
-        td_loss_history.append(loss.data.cpu().item())
-        grad_norm_history.append(grad_norm)
+		if step % loss_freq == 0:
+			td_loss_history.append(loss.data.cpu().item())
+			grad_norm_history.append(grad_norm)
 
-    if step % refresh_target_network_freq == 0:
-        target_network.load_state_dict(agent.state_dict())
+		if step % refresh_target_network_freq == 0:
+			target_network.load_state_dict(agent.state_dict())
 
-    if step % eval_freq == 0:
-        mean_rw_history.append(evaluate(
-            make_env(clip_rewards=True, seed=step), agent, n_games=3 * n_lives, greedy=True)
-        )
-        initial_state_q_values = agent.get_qvalues(
-            [make_env(seed=step).reset()]
-        )
-        initial_state_v_history.append(np.max(initial_state_q_values))
+		if step % eval_freq == 0:
+			mean_rw_history.append(evaluate(
+				make_env(clip_rewards=True, seed=step), agent, n_games=3 * n_lives, greedy=True)
+			)
+			initial_state_q_values = agent.get_qvalues(
+				[make_env(seed=step).reset()]
+			)
+			initial_state_v_history.append(np.max(initial_state_q_values))
 
-        clear_output(True)
-        print("buffer size = %i, epsilon = %.5f" %
-              (len(exp_replay), agent.epsilon))
+			clear_output(True)
+			print("buffer size = %i, epsilon = %.5f" %
+				  (len(exp_replay), agent.epsilon))
 
-        plt.figure(figsize=[16, 9])
+			plt.figure(figsize=[16, 9])
 
-        plt.subplot(2, 2, 1)
-        plt.title("Mean reward per life")
-        plt.plot(mean_rw_history)
-        plt.grid()
+			plt.subplot(2, 2, 1)
+			plt.title("Mean reward per life")
+			plt.plot(mean_rw_history)
+			plt.grid()
 
-        assert not np.isnan(td_loss_history[-1])
-        plt.subplot(2, 2, 2)
-        plt.title("TD loss history (smoothened)")
-        plt.plot(utils.smoothen(td_loss_history))
-        plt.grid()
+			assert not np.isnan(td_loss_history[-1])
+			plt.subplot(2, 2, 2)
+			plt.title("TD loss history (smoothened)")
+			plt.plot(utils.smoothen(td_loss_history))
+			plt.grid()
 
-        plt.subplot(2, 2, 3)
-        plt.title("Initial state V")
-        plt.plot(initial_state_v_history)
-        plt.grid()
+			plt.subplot(2, 2, 3)
+			plt.title("Initial state V")
+			plt.plot(initial_state_v_history)
+			plt.grid()
 
-        plt.subplot(2, 2, 4)
-        plt.title("Grad norm history (smoothened)")
-        plt.plot(utils.smoothen(grad_norm_history))
-        plt.grid()
+			plt.subplot(2, 2, 4)
+			plt.title("Grad norm history (smoothened)")
+			plt.plot(utils.smoothen(grad_norm_history))
+			plt.grid()
 
-        plt.show()
+			plt.show()
 
-        
+
+
+
+def main():
+	opt=get_args()	
+
+	assert opt.environment in ENV_LIST, \
+		"Unsupported environment: {} \nSupported environemt: {}".format(opt.environment, ENV_LIST)
+
+	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+	env = BNF.make_env()
+	state_shape = env.observation_space.shape
+	n_actions = env.action_space.n
+		
+
+	agent = DQNAgent(state_shape, n_actions, epsilon=1).to(device)
+	target_network = DQNAgent(state_shape, n_actions).to(device)
+
+	train(env,agent,target_network,device)
+	
+
+
+	
+
+		
 
 
 
