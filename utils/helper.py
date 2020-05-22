@@ -1,3 +1,4 @@
+import torch
 
 def evaluate(env, agent, n_games=1, greedy=False, t_max=10000):
     """ Plays n_games full games. If greedy, picks actions as argmax(qvalues). Returns mean reward. """
@@ -52,7 +53,7 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
                     agent, target_network,
                     gamma=0.99,
                     check_shapes=False,
-                    device=device):
+                    device=torch.device('cpu')):
     """ Compute td loss using torch operations only. Use the formulae above. """
     states = torch.tensor(states, device=device, dtype=torch.float)    # shape: [batch_size, *state_shape]
 
