@@ -3,6 +3,19 @@ import torch.nn as nn
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
+    elif type(m) == nn.Linear:
+        torch.nn.init.xavier_uniform(m.weight)
+        m.bias.data.fill_(0.01)
+
+
+
 class DQNAgent(nn.Module):
     def __init__(self, state_shape, n_actions, epsilon=0):
 
@@ -36,18 +49,7 @@ class DQNAgent(nn.Module):
         self.network.apply(weights_init)
 
     def forward(self, state_t):
-        """
-        takes agent's observation (tensor), returns qvalues (tensor)
-        :param state_t: a batch of 4-frame buffers, shape = [batch_size, 4, h, w]
-        """
-        # Use your network to compute qvalues for given state
-        # print(state_t.size())
         qvalues = self.network(state_t)
-
-        assert qvalues.requires_grad, "qvalues must be a torch tensor with grad"
-        assert len(
-            qvalues.shape) == 2 and qvalues.shape[0] == state_t.shape[0] and qvalues.shape[1] == n_actions
-
         return qvalues
 
     def get_qvalues(self, states):
