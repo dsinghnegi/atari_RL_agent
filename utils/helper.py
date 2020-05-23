@@ -1,5 +1,5 @@
 import torch
-
+import numpy as np
 def evaluate(env, agent, n_games=1, greedy=False, t_max=10000):
     """ Plays n_games full games. If greedy, picks actions as argmax(qvalues). Returns mean reward. """
     rewards = []
