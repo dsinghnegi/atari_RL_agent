@@ -12,6 +12,9 @@ from utils.replay_buffer import ReplayBuffer
 from utils import utils
 from utils.helper import play_and_record, compute_td_loss, evaluate
 from torch import nn
+from torch.utils.tensorboard import SummaryWriter
+
+
 
 
 ENV_LIST=['BreakoutNoFrameskip-v4']
@@ -19,11 +22,12 @@ ENV_LIST=['BreakoutNoFrameskip-v4']
 def get_args():
 	ap = argparse.ArgumentParser()
 	ap.add_argument("-e", "--environment", default="BreakoutNoFrameskip-v4" ,help="envirement to play")
+	ap.add_argument("-l", "--log_dir", default="logs" ,help="logs dir for tensorboard")
 	opt = ap.parse_args()
 	return opt
 
 
-def train(env,make_env,agent,target_network,device):
+def train(env,make_env,agent,target_network,device,writer):
 	state = env.reset()
 
 
@@ -63,10 +67,6 @@ def train(env,make_env,agent,target_network,device):
 	n_lives = 5
 
 
-	mean_rw_history = []
-	td_loss_history = []
-	grad_norm_history = []
-	initial_state_v_history = []
 	step = 0
 
 	_, state = play_and_record(state, agent, env, exp_replay, timesteps_per_epoch)
@@ -117,50 +117,35 @@ def train(env,make_env,agent,target_network,device):
 		opt.zero_grad()
 
 		if step % loss_freq == 0:
-			td_loss_history.append(loss.data.cpu().item())
-			grad_norm_history.append(grad_norm)
+			td_loss=loss.data.cpu().item()
+			grad_norm=grad_norm
+
+			assert not np.isnan(td_loss)
+			writer.add_scalar("TD loss history (smoothened)",
+                            utils.smoothen([td_loss])[-1],
+                            step)
+			writer.add_scalar("Grad norm history (smoothened)",
+                            utils.smoothen([grad_norm])[-1],
+                            step)
+
 
 		if step % refresh_target_network_freq == 0:
 			target_network.load_state_dict(agent.state_dict())
 
 		if step % eval_freq == 0:
-			mean_rw_history.append(evaluate(
-				make_env(clip_rewards=True, seed=step), agent, n_games=3 * n_lives, greedy=True)
-			)
+			mean_rw=evaluate(make_env(clip_rewards=True, seed=step), agent, n_games=3 * n_lives, greedy=True)
+			
 			initial_state_q_values = agent.get_qvalues(
 				[make_env(seed=step).reset()]
 			)
-			initial_state_v_history.append(np.max(initial_state_q_values))
+			initial_state_v=np.max(initial_state_q_values)
 
-			# clear_output(True)
-			print("buffer size = %i, epsilon = %.5f" %
-				  (len(exp_replay), agent.epsilon))
+		
+			print("buffer size = %i, epsilon = %.5f" % (len(exp_replay), agent.epsilon))
 
-			plt.figure(figsize=[16, 9])
-
-			plt.subplot(2, 2, 1)
-			plt.title("Mean reward per life")
-			plt.plot(mean_rw_history)
-			plt.grid()
-
-			assert not np.isnan(td_loss_history[-1])
-			plt.subplot(2, 2, 2)
-			plt.title("TD loss history (smoothened)")
-			plt.plot(utils.smoothen(td_loss_history))
-			plt.grid()
-
-			plt.subplot(2, 2, 3)
-			plt.title("Initial state V")
-			plt.plot(initial_state_v_history)
-			plt.grid()
-
-			plt.subplot(2, 2, 4)
-			plt.title("Grad norm history (smoothened)")
-			plt.plot(utils.smoothen(grad_norm_history))
-			plt.grid()
-
-			plt.show()
-
+			writer.add_scalar("Mean reward per life", mean_rw, step)
+			writer.add_scalar("Initial state V", initial_state_v, step)
+			writer.close()
 
 
 
@@ -169,6 +154,9 @@ def main():
 
 	assert opt.environment in ENV_LIST, \
 		"Unsupported environment: {} \nSupported environemt: {}".format(opt.environment, ENV_LIST)
+
+
+	writer = SummaryWriter(opt.log_dir)
 
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -180,14 +168,12 @@ def main():
 	agent = DQNAgent(state_shape, n_actions, epsilon=1).to(device)
 	target_network = DQNAgent(state_shape, n_actions).to(device)
 
-	train(env,BNF.make_env,agent,target_network,device)
+
+	writer.add_graph(agent,torch.tensor([env.reset()]).to(device))
+	writer.close()
+
+	train(env,BNF.make_env,agent,target_network,device,writer)
 	
-
-
-	
-
-		
-
 
 
 
