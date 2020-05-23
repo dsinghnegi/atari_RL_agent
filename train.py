@@ -1,14 +1,18 @@
 import os
 import argparse
 
-from tqdm import tqdm
+from tqdm import tqdm,trange
 import torch
+import numpy as np
+import matplotlib.pyplot as plt
 
 from models.dqn import DQNAgent
 from preprocessing import BreakoutNoFrameskip as BNF
 from utils.replay_buffer import ReplayBuffer
 from utils import utils
 from utils.helper import play_and_record, compute_td_loss, evaluate
+from torch import nn
+
 
 ENV_LIST=['BreakoutNoFrameskip-v4']
 
@@ -19,12 +23,12 @@ def get_args():
 	return opt
 
 
-def train(env,agent,target_network,device):
+def train(env,make_env,agent,target_network,device):
 	state = env.reset()
 
 
 	exp_replay = ReplayBuffer(10**4)
-	for i in range(100):
+	for i in tqdm(range(100)):
 		if not utils.is_enough_ram(min_available_gb=0.1):
 			print("""
 				Less than 100 Mb RAM available. 
@@ -128,7 +132,7 @@ def train(env,agent,target_network,device):
 			)
 			initial_state_v_history.append(np.max(initial_state_q_values))
 
-			clear_output(True)
+			# clear_output(True)
 			print("buffer size = %i, epsilon = %.5f" %
 				  (len(exp_replay), agent.epsilon))
 
@@ -176,7 +180,7 @@ def main():
 	agent = DQNAgent(state_shape, n_actions, epsilon=1).to(device)
 	target_network = DQNAgent(state_shape, n_actions).to(device)
 
-	train(env,agent,target_network,device)
+	train(env,BNF.make_env,agent,target_network,device)
 	
 
 
