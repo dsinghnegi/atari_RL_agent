@@ -33,7 +33,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path):
 	state = env.reset()
 
 
-	exp_replay = ReplayBuffer(10**4)
+	exp_replay = ReplayBuffer(10**5)
 	for i in tqdm(range(100)):
 		if not utils.is_enough_ram(min_available_gb=0.1):
 			print("""
@@ -44,18 +44,17 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path):
 				 )
 			break
 		play_and_record(state, agent, env, exp_replay, n_steps=10**2)
-		if len(exp_replay) == 10**4:
+		if len(exp_replay) == 10**5:
 			break
 
 
 	print("Experience Reply buffer : {}".format(len(exp_replay)))
 
-	timesteps_per_epoch = 1
-	batch_size = 16
+	timesteps_per_epoch = 10
+	batch_size = 128
 	total_steps = 3 * 10**6
-	decay_steps = 10**6
 
-	opt = torch.optim.Adam(agent.parameters(), lr=1e-4)
+	opt = torch.optim.Adam(agent.parameters(), lr=1e-3)
 
 	init_epsilon = 1
 	final_epsilon = 0.1
@@ -89,7 +88,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path):
 	
 
 	state = env.reset()
-	for step in trange(step, total_steps + 1):
+	for step in range(step, total_steps + 1):
 		if not utils.is_enough_ram():
 			print('less that 100 Mb RAM available, freezing')
 			print('make sure everythin is ok and make KeyboardInterrupt to continue')
@@ -99,7 +98,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path):
 			except KeyboardInterrupt:
 				pass
 
-		agent.epsilon = utils.linear_decay(init_epsilon, final_epsilon, step, decay_steps)
+		agent.epsilon = utils.linear_decay(init_epsilon, final_epsilon, step, total_steps)
 
 		# play
 		_, state = play_and_record(state, agent, env, exp_replay, timesteps_per_epoch)
@@ -144,7 +143,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path):
 			initial_state_v=np.max(initial_state_q_values)
 
 		
-			print("buffer size = %i, epsilon = %.5f" % (len(exp_replay), agent.epsilon))
+			print("buffer size = %i, epsilon = %.5f, mean_rw=%.2f, initial_state_v= %.2f"   % (len(exp_replay), agent.epsilon, mean_rw, initial_state_v))
 
 			writer.add_scalar("Mean reward per life", mean_rw, step)
 			writer.add_scalar("Initial state V", initial_state_v, step)
