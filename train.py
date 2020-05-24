@@ -162,7 +162,7 @@ def main():
 
 	writer = SummaryWriter(opt.log_dir)
 	checkpoint_path=opt.train_dir
-	if not os.exists(checkpoint_path):
+	if not os.path.exists(checkpoint_path):
 		os.mkdir(checkpoint_path)
 
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
