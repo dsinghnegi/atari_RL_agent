@@ -50,17 +50,17 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path):
 
 	print("Experience Reply buffer : {}".format(len(exp_replay)))
 
-	timesteps_per_epoch = 10
+	timesteps_per_epoch = 1
 	batch_size = 128
-	total_steps = 3 * 10**6
+	total_steps = 3 * 10**5
 
-	opt = torch.optim.Adam(agent.parameters(), lr=1e-3)
+	opt = torch.optim.Adam(agent.parameters(), lr=1e-4)
 
 	init_epsilon = 1
 	final_epsilon = 0.1
 
 	loss_freq = 50
-	refresh_target_network_freq = 5000
+	refresh_target_network_freq = 2500
 	eval_freq = 5000
 
 	max_grad_norm = 50
@@ -88,7 +88,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path):
 	
 
 	state = env.reset()
-	for step in range(step, total_steps + 1):
+	for step in trange(step, total_steps + 1):
 		if not utils.is_enough_ram():
 			print('less that 100 Mb RAM available, freezing')
 			print('make sure everythin is ok and make KeyboardInterrupt to continue')
