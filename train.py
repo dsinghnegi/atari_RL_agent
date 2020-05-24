@@ -23,11 +23,13 @@ def get_args():
 	ap = argparse.ArgumentParser()
 	ap.add_argument("-e", "--environment", default="BreakoutNoFrameskip-v4" ,help="envirement to play")
 	ap.add_argument("-l", "--log_dir", default="logs" ,help="logs dir for tensorboard")
+	ap.add_argument("-t", "--train_dir", default="train_dir" ,help="checkpoint directory for tensorboard")
+	
 	opt = ap.parse_args()
 	return opt
 
 
-def train(env,make_env,agent,target_network,device,writer):
+def train(env,make_env,agent,target_network,device,writer,checkpoint_path):
 	state = env.reset()
 
 
@@ -131,6 +133,7 @@ def train(env,make_env,agent,target_network,device,writer):
 
 		if step % refresh_target_network_freq == 0:
 			target_network.load_state_dict(agent.state_dict())
+			torch.save(agent.state_dict(), os.path.join(checkpoint_path,"agent_{}.pth".format(step)))
 
 		if step % eval_freq == 0:
 			mean_rw=evaluate(make_env(clip_rewards=True, seed=step), agent, n_games=3 * n_lives, greedy=True)
@@ -147,6 +150,7 @@ def train(env,make_env,agent,target_network,device,writer):
 			writer.add_scalar("Initial state V", initial_state_v, step)
 			writer.close()
 
+	torch.save(agent.state_dict(), os.path.join(checkpoint_path,"agent_{}.pth".format(total_steps)))
 
 
 def main():
@@ -157,6 +161,9 @@ def main():
 
 
 	writer = SummaryWriter(opt.log_dir)
+	checkpoint_path=opt.train_dir
+	if not os.exists(checkpoint_path):
+		os.mkdir(checkpoint_path)
 
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -172,7 +179,7 @@ def main():
 	writer.add_graph(agent,torch.tensor([env.reset()]).to(device))
 	writer.close()
 
-	train(env,BNF.make_env,agent,target_network,device,writer)
+	train(env,BNF.make_env,agent,target_network,device,writer,checkpoint_path)
 	
 
 
