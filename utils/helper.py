@@ -53,7 +53,7 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
                     agent, target_network,
                     gamma=0.99,
                     check_shapes=False,
-                    device=torch.device('cpu')):
+                    device=torch.device('cpu'),double_dqn=True):
     """ Compute td loss using torch operations only. Use the formulae above. """
     states = torch.tensor(states, device=device, dtype=torch.float)    # shape: [batch_size, *state_shape]
 
@@ -79,8 +79,14 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
     predicted_qvalues_for_actions = predicted_qvalues[range(
         len(actions)), actions]
 
+    if double_dqn:
+        next_actions=agent(next_states).argmax(axis=-1)[0]
+    else:
+        next_actions=target_network(next_states).argmax(axis=-1)[0]
+    
+
     # compute V*(next_states) using predicted next q-values
-    next_state_values = predicted_next_qvalues.max(axis=-1)[0]
+    next_state_values=predicted_next_qvalues[range(len(next_actions)), next_actions]
 
     # print(next_state_values.dim(),next_state_values.shape[0])
     assert next_state_values.dim(

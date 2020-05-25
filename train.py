@@ -24,12 +24,13 @@ def get_args():
 	ap.add_argument("-e", "--environment", default="BreakoutNoFrameskip-v4" ,help="envirement to play")
 	ap.add_argument("-l", "--log_dir", default="logs" ,help="logs dir for tensorboard")
 	ap.add_argument("-t", "--train_dir", default="train_dir" ,help="checkpoint directory for tensorboard")
+	ap.add_argument( "--double_dqn", default=True ,help="enable double_dqn")
 	
 	opt = ap.parse_args()
 	return opt
 
 
-def train(env,make_env,agent,target_network,device,writer,checkpoint_path):
+def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 	state = env.reset()
 
 
@@ -49,12 +50,15 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path):
 
 
 	print("Experience Reply buffer : {}".format(len(exp_replay)))
+	double_dqn=opt.double_dqn
+	if double_dqn:
+		print("Double DQN will be used for loss")
 
 	timesteps_per_epoch = 1
 	batch_size = 128
 	total_steps = 3 * 10**5
 
-	opt = torch.optim.Adam(agent.parameters(), lr=1e-4)
+	optim = torch.optim.Adam(agent.parameters(), lr=1e-4)
 
 	init_epsilon = 1
 	final_epsilon = 0.1
@@ -70,16 +74,6 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path):
 
 	step = 0
 
-	_, state = play_and_record(state, agent, env, exp_replay, timesteps_per_epoch)
-	# td_loss_history.append(loss_t)
-	# train
-	states, actions, rewards, next_states, is_done=exp_replay.sample(batch_size)
-
-	loss = compute_td_loss(states, actions, rewards, next_states, is_done,
-			agent, target_network,
-			gamma=0.99,
-			check_shapes=True,
-			device=device)
 
 
 	score=evaluate(make_env(clip_rewards=True, seed=444), agent, n_games=3 * n_lives, greedy=True)
@@ -110,12 +104,13 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path):
 						agent, target_network,
 						gamma=0.99,
 						check_shapes=False,
-						device=device)
+						device=device,
+						double_dqn=double_dqn)
 
 		loss.backward()
 		grad_norm = nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
-		opt.step()
-		opt.zero_grad()
+		optim.step()
+		optim.zero_grad()
 
 		if step % loss_freq == 0:
 			td_loss=loss.data.cpu().item()
@@ -178,7 +173,7 @@ def main():
 	writer.add_graph(agent,torch.tensor([env.reset()]).to(device))
 	writer.close()
 
-	train(env,BNF.make_env,agent,target_network,device,writer,checkpoint_path)
+	train(env,BNF.make_env,agent,target_network,device,writer,checkpoint_path,opt)
 	
 
 
