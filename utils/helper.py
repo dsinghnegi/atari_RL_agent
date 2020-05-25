@@ -80,10 +80,10 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
         len(actions)), actions]
 
     if double_dqn:
-        next_actions=agent(next_states).argmax(axis=-1)[0]
+        next_actions=agent(next_states).argmax(axis=-1)
     else:
-        next_actions=target_network(next_states).argmax(axis=-1)[0]
-    
+        next_actions=target_network(next_states).argmax(axis=-1)
+        
 
     # compute V*(next_states) using predicted next q-values
     next_state_values=predicted_next_qvalues[range(len(next_actions)), next_actions]
