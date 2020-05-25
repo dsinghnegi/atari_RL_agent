@@ -49,7 +49,7 @@ class DQNAgent(nn.Module):
         self.network.apply(weights_init)
 
     def forward(self, state_t):
-        qvalues = self.network(state_t)
+        qvalues = torch.nn.functional.softmax(self.network(state_t))
         return qvalues
 
     def get_qvalues(self, states):
