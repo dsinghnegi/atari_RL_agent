@@ -78,7 +78,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path):
 	loss = compute_td_loss(states, actions, rewards, next_states, is_done,
 			agent, target_network,
 			gamma=0.99,
-			check_shapes=False,
+			check_shapes=True,
 			device=device)
 
 
