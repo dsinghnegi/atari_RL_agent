@@ -18,7 +18,7 @@ class PreprocessAtariObs(ObservationWrapper):
         self.observation_space = Box(0.0, 1.0, self.img_size)
 
 
-    def _to_gray_scale(self, rgb, channel_weights=[0.8, 0.1, 0.1]):
+    def _to_gray_scale(self, rgb, channel_weights=[0.5, 0.2, 0.3]):
         gray=rgb[:,:,0]*channel_weights[0]+rgb[:,:,1]*channel_weights[1]+rgb[:,:,2]*channel_weights[2]
         return gray 
 
