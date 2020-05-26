@@ -44,10 +44,10 @@ class DQNAgent(nn.Module):
             nn.ReLU(),
 
             nn.Flatten(),
-            nn.Linear(1024,512),
+            nn.Linear(2304,1024),
             # nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.Linear(512,n_actions),
+            nn.Linear(1024,n_actions),
 
         )
         # self.network.apply(weights_init)
