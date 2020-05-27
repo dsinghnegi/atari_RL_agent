@@ -59,8 +59,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 		agent.load_state_dict(torch.load(opt.checkpoint))
 		target_network.load_state_dict(torch.load(opt.checkpoint))
 		step=int(re.findall(r'\d+', opt.checkpoint)[-1])
-	print(step)
-	sss
+
 
 	exp_replay = ReplayBuffer(10**4)
 	for i in tqdm(range(100)):
@@ -93,8 +92,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 	loss=10**6
 
 	state = env.reset()
-	t=trange(step,total_steps + 1,desc='Bar desc',leave=True)
-	for step in t:
+	for step in trange(step,total_steps + 1):
 		if not utils.is_enough_ram():
 			print('less that 100 Mb RAM available, freezing')
 			print('make sure everythin is ok and make KeyboardInterrupt to continue')
@@ -103,8 +101,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 					pass
 			except KeyboardInterrupt:
 				pass
-		t.set_description("Bar desc (file %i)" % loss)
-		t.refresh()
+
 		agent.epsilon = utils.linear_decay(init_epsilon, final_epsilon, step, total_steps)
 
 		# play
