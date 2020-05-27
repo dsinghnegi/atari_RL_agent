@@ -12,6 +12,7 @@ def evaluate(env, agent, n_games=1, greedy=False, t_max=10000):
             action = qvalues.argmax(axis=-1)[0] if greedy else agent.sample_actions(qvalues)[0]
             s, r, done, _ = env.step(action)
             reward += r
+ 
             if done:
                 break
 
@@ -104,8 +105,10 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
         target_qvalues_for_actions = rewards+is_not_done*(gamma*next_state_values)
 
     # mean squared error loss to minimize
-    loss = torch.mean((predicted_qvalues_for_actions -
-                       target_qvalues_for_actions.detach()) ** 2)
+    idx=torch.argsort((predicted_qvalues_for_actions -
+                       target_qvalues_for_actions.detach()) ** 2)[-8:]
+    loss = torch.mean((predicted_qvalues_for_actions[idx] -
+                       target_qvalues_for_actions.detach()[idx]) ** 2)
 
     if check_shapes:
         assert predicted_next_qvalues.data.dim(
