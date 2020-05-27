@@ -1,5 +1,7 @@
 import os
 import argparse
+import re
+
 
 from tqdm import tqdm,trange
 import torch
@@ -16,7 +18,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 
-
 ENV_LIST=['BreakoutNoFrameskip-v4']
 
 def get_args():
@@ -24,17 +25,44 @@ def get_args():
 	ap.add_argument("-e", "--environment", default="BreakoutNoFrameskip-v4" ,help="envirement to play")
 	ap.add_argument("-l", "--log_dir", default="logs" ,help="logs dir for tensorboard")
 	ap.add_argument("-t", "--train_dir", default="train_dir" ,help="checkpoint directory for tensorboard")
+	ap.add_argument("-c", "--checkpoint",default=None,help="checkpoint for agent")
 	ap.add_argument( "--double_dqn", default=True ,help="enable double_dqn")
 	
 	opt = ap.parse_args()
 	return opt
 
 
+
 def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
+	timesteps_per_epoch = 1
+	batch_size = 16
+	total_steps = 3 * 10**6
+
+	optim = torch.optim.Adam(agent.parameters(), lr=1e-4)
+
+	init_epsilon = 1
+	final_epsilon = 0.1
+
+	loss_freq = 50
+	refresh_target_network_freq = 5000
+	eval_freq = 5000
+
+	max_grad_norm = 50
+
+	n_lives = 5
+
+
+	step = 0
+
 	state = env.reset()
+	if opt.checkpoint:
+		agent.load_state_dict(torch.load(opt.checkpoint))
+		target_network.load_state_dict(torch.load(opt.checkpoint))
+		step=int(re.findall(r'\d+', opt.checkpoint)[-1])
+	print(step)
+	sss
 
-
-	exp_replay = ReplayBuffer(10**5)
+	exp_replay = ReplayBuffer(10**4)
 	for i in tqdm(range(100)):
 		if not utils.is_enough_ram(min_available_gb=0.1):
 			print("""
@@ -45,34 +73,16 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 				 )
 			break
 		play_and_record(state, agent, env, exp_replay, n_steps=10**2)
-		if len(exp_replay) == 10**5:
+		if len(exp_replay) == 10**4:
 			break
 
 
 	print("Experience Reply buffer : {}".format(len(exp_replay)))
 	double_dqn=opt.double_dqn
+
 	if double_dqn:
 		print("Double DQN will be used for loss")
 
-	timesteps_per_epoch = 1
-	batch_size = 128
-	total_steps = 3 * 10**5
-
-	optim = torch.optim.Adam(agent.parameters(), lr=1e-4)
-
-	init_epsilon = 1
-	final_epsilon = 0.1
-
-	loss_freq = 50
-	refresh_target_network_freq = 2500
-	eval_freq = 5000
-
-	max_grad_norm = 50
-
-	n_lives = 5
-
-
-	step = 0
 
 
 
@@ -80,9 +90,11 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 	print("Score without training: {}".format(score))
 
 	
+	loss=10**6
 
 	state = env.reset()
-	for step in trange(step, total_steps + 1):
+	t=trange(step,total_steps + 1,desc='Bar desc',leave=True)
+	for step in t:
 		if not utils.is_enough_ram():
 			print('less that 100 Mb RAM available, freezing')
 			print('make sure everythin is ok and make KeyboardInterrupt to continue')
@@ -91,7 +103,8 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 					pass
 			except KeyboardInterrupt:
 				pass
-
+		t.set_description("Bar desc (file %i)" % loss)
+		t.refresh()
 		agent.epsilon = utils.linear_decay(init_epsilon, final_epsilon, step, total_steps)
 
 		# play
@@ -169,6 +182,7 @@ def main():
 	agent = DQNAgent(state_shape, n_actions, epsilon=1).to(device)
 	target_network = DQNAgent(state_shape, n_actions).to(device)
 
+	
 
 	writer.add_graph(agent,torch.tensor([env.reset()]).to(device))
 	writer.close()
