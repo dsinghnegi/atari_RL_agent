@@ -58,11 +58,12 @@ class DQNAgent(nn.Module):
 
     def get_qvalues(self, states):
         """
-        like forward, but works on numpy arrays, not tensors
-        """
-        model_device = next(self.parameters()).device
-        states = torch.tensor(states, device=model_device, dtype=torch.float)
-        qvalues = self.forward(states)
+            like forward, but works on numpy arrays, not tensors
+            """
+        with torch.no_grad():
+            model_device = next(self.parameters()).device
+            states = torch.tensor(states, device=model_device, dtype=torch.float)
+            qvalues = self.forward(states)
         return qvalues.data.cpu().numpy()
 
     def sample_actions(self, qvalues):
