@@ -50,8 +50,7 @@ class DQNAgent(nn.Module):
             # nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.Linear(1024,n_actions),
-            nn.ReLU(),
-            
+
         )
         # self.network.apply(weights_init)
 

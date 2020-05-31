@@ -80,35 +80,35 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
             len(actions)), actions]
 
 
-    with torch.no_grad():
-        # compute q-values for all actions in next states
-        predicted_next_qvalues = target_network(next_states)
+    # compute q-values for all actions in next states
+    predicted_next_qvalues = target_network(next_states)
+    
+    
+    if double_dqn:
+        next_actions=agent(next_states).argmax(axis=-1)
+    else:
+        next_actions=target_network(next_states).argmax(axis=-1)
         
-       
-        if double_dqn:
-            next_actions=agent(next_states).argmax(axis=-1)
-        else:
-            next_actions=target_network(next_states).argmax(axis=-1)
-            
 
-        # compute V*(next_states) using predicted next q-values
-        next_state_values=predicted_next_qvalues[range(len(next_actions)), next_actions]
+    # compute V*(next_states) using predicted next q-values
+    next_state_values=predicted_next_qvalues[range(len(next_actions)), next_actions]
 
-        # print(next_state_values.dim(),next_state_values.shape[0])
-        assert next_state_values.dim(
-        ) == 1 and next_state_values.shape[0] == states.shape[0], "must predict one value per state"
+    # print(next_state_values.dim(),next_state_values.shape[0])
+    assert next_state_values.dim(
+    ) == 1 and next_state_values.shape[0] == states.shape[0], "must predict one value per state"
 
-        # compute "target q-values" for loss - it's what's inside square parentheses in the above formula.
-        # at the last state use the simplified formula: Q(s,a) = r(s,a) since s' doesn't exist
-        # you can multiply next state values by is_not_done to achieve this.
-        # print(predicted_qvalues.shape,rewards.shape)
-        target_qvalues_for_actions = rewards+is_not_done*(gamma*next_state_values)
+    # compute "target q-values" for loss - it's what's inside square parentheses in the above formula.
+    # at the last state use the simplified formula: Q(s,a) = r(s,a) since s' doesn't exist
+    # you can multiply next state values by is_not_done to achieve this.
+    # print(predicted_qvalues.shape,rewards.shape)
+    target_qvalues_for_actions = rewards+is_not_done*(gamma*next_state_values)
 
     # mean squared error loss to minimize
     error=torch.abs(predicted_qvalues_for_actions -
                        target_qvalues_for_actions.detach())
     
-    loss = torch.mean(torch.from_numpy(is_weight).to(device)* torch.pow(error, 2))
+    loss = torch.mean(torch.from_numpy(is_weight).to(device).detach()* torch.pow(predicted_qvalues_for_actions -
+                       target_qvalues_for_actions.detach(), 2))
 
     if check_shapes:
         assert predicted_next_qvalues.data.dim(

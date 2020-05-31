@@ -48,7 +48,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 	refresh_target_network_freq = 5000
 	eval_freq = 5000
 
-	max_grad_norm = 50
+	max_grad_norm = 2.0
 
 	n_lives = 5
 	priority_replay=opt.priority_replay
@@ -110,6 +110,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 
 		# train
 		states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,is_weight=exp_replay.sample(batch_size)
+		optim.zero_grad()
 
 		loss,error = compute_td_loss(states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,
 						agent, target_network,is_weight,
@@ -117,12 +118,13 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 						check_shapes=False,
 						device=device,
 						double_dqn=double_dqn)
-		exp_replay.update_priority(error)
+
 		loss.backward()
 		grad_norm = nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
 		optim.step()
-		optim.zero_grad()
+		exp_replay.update_priority(error)
 
+		# print("--->",loss.data.cpu().item(),grad_norm)
 		if step % loss_freq == 0:
 			td_loss=loss.data.cpu().item()
 			grad_norm=grad_norm
