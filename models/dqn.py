@@ -50,7 +50,8 @@ class DQNAgent(nn.Module):
             # nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.Linear(1024,n_actions),
-
+            nn.ReLU(),
+            
         )
         # self.network.apply(weights_init)
 
@@ -58,7 +59,7 @@ class DQNAgent(nn.Module):
         state_t[:,1,:,:]-=state_t[:,0,:,:]
         state_t[:,2,:,:]-=state_t[:,0,:,:]
         state_t[:,3,:,:]-=state_t[:,0,:,:]
-        qvalues = self.network(np.abs(state_t[:,1:]))
+        qvalues = self.network(torch.abs(state_t[:,1:]))
         return qvalues
 
     def get_qvalues(self, states):
