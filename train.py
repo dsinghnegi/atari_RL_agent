@@ -27,6 +27,7 @@ def get_args():
 	ap.add_argument("-t", "--train_dir", default="train_dir" ,help="checkpoint directory for tensorboard")
 	ap.add_argument("-c", "--checkpoint",default=None,help="checkpoint for agent")
 	ap.add_argument( "--double_dqn", default=True ,help="enable double_dqn")
+	ap.add_argument( "--priority_replay", default=True ,help="enable priority replay")
 	
 	opt = ap.parse_args()
 	return opt
@@ -50,7 +51,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 	max_grad_norm = 50
 
 	n_lives = 5
-
+	priority_replay=opt.priority_replay
 
 	step = 0
 
@@ -61,7 +62,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 		step=int(re.findall(r'\d+', opt.checkpoint)[-1])
 
 
-	exp_replay = ReplayBuffer(10**5)
+	exp_replay = ReplayBuffer(10**5,priority_replay)
 	for i in tqdm(range(100)):
 		if not utils.is_enough_ram(min_available_gb=0.1):
 			print("""
@@ -108,15 +109,15 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 		_, state = play_and_record(state, agent, env, exp_replay, timesteps_per_epoch)
 
 		# train
-		states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn=exp_replay.sample(batch_size)
+		states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,is_weight=exp_replay.sample(batch_size)
 
-		loss = compute_td_loss(states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,
-						agent, target_network,
+		loss,error = compute_td_loss(states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,
+						agent, target_network,is_weight,
 						gamma=0.99,
 						check_shapes=False,
 						device=device,
 						double_dqn=double_dqn)
-
+		exp_replay.update_priority(error)
 		loss.backward()
 		grad_norm = nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
 		optim.step()

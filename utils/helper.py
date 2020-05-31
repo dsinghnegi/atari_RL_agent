@@ -52,7 +52,7 @@ def play_and_record(initial_state, agent, env, exp_replay, n_steps=1):
 
 
 def compute_td_loss(states, actions, rewards, next_states, is_done,
-                    agent, target_network,
+                    agent, target_network,is_weight,
                     gamma=0.99,
                     check_shapes=False,
                     device=torch.device('cpu'),double_dqn=True):
@@ -105,8 +105,9 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
         target_qvalues_for_actions = rewards+is_not_done*(gamma*next_state_values)
 
     # mean squared error loss to minimize
-    loss = torch.mean((predicted_qvalues_for_actions -
-                       target_qvalues_for_actions.detach()) ** 2)
+    error=torch.abs(predicted_qvalues_for_actions -
+                       target_qvalues_for_actions.detach())
+    loss = torch.mean(is_weight* error** 2)
 
     if check_shapes:
         assert predicted_next_qvalues.data.dim(
@@ -116,7 +117,7 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
         assert target_qvalues_for_actions.data.dim(
         ) == 1, "there's something wrong with target q-values, they must be a vector"
 
-    return loss
+    return loss,error.detach().cpu().numpy()
 
 
 
