@@ -22,10 +22,11 @@ class ReplayBuffer(object):
         self._eps=eps
         self.alpha=alpha
         self.beta=beta
+        self._size=0
 
 
     def __len__(self):
-        return len(self._storage["obses_t"])
+        return self._size
 
     def _max_priority(self):
         return np.max(self._probabilities) if self.priority_replay else 1.0
@@ -39,21 +40,22 @@ class ReplayBuffer(object):
             }
 
         if len(self)==0:
-            self._storage=data
-            self._probabilities=np.array([1.0])
+            self._probabilities=np.zeros((self._maxsize),dtype=np.float32)
+            self._probabilities[0]=1.0
+            for k in data.keys():
+              self._storage[k]=np.zeros(( self._maxsize,*data[k].shape[1:]),dtype=data[k].dtype)
+           
 
-        if self._next_idx >= len(self):
-            self._probabilities=np.vstack((self._probabilities,[self._max_priority()]))
-            for k in data.keys():
-                self._storage[k]=np.vstack((self._storage[k],data[k]))
-        else:
-            for k in data.keys():
-                self._storage[k][self._next_idx] = data[k]
+        self._probabilities[self._next_idx]=self._max_priority()
+        for k in data.keys():
+            self._storage[k][self._next_idx] = data[k]
+        
+        self._size=min(self._size+1,self._maxsize)
         self._next_idx = (self._next_idx + 1) % self._maxsize
 
     def update_priority(self,td_loss):
         if self.priority_replay:
-            self._probabilities[self.idxes]=np.power(torch.abs(td_loss) + self._eps,self.alpha)
+            self._probabilities[self.idxes]=np.power(np.abs(td_loss) + self._eps,self.alpha)
 
     def _encode_sample(self, idxes):
         
@@ -96,4 +98,4 @@ class ReplayBuffer(object):
             is_weight /= is_weight.max()
         else:
            is_weight=np.ones(len(self.idxes)) 
-        return (*self._encode_sample(idxes),is_weight)
+        return (*self._encode_sample(self.idxes),is_weight)

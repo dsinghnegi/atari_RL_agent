@@ -107,7 +107,8 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
     # mean squared error loss to minimize
     error=torch.abs(predicted_qvalues_for_actions -
                        target_qvalues_for_actions.detach())
-    loss = torch.mean(is_weight* error** 2)
+    
+    loss = torch.mean(torch.from_numpy(is_weight).to(device)* torch.pow(error, 2))
 
     if check_shapes:
         assert predicted_next_qvalues.data.dim(
@@ -118,7 +119,3 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
         ) == 1, "there's something wrong with target q-values, they must be a vector"
 
     return loss,error.detach().cpu().numpy()
-
-
-
-
