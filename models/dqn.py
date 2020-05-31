@@ -56,10 +56,10 @@ class DQNAgent(nn.Module):
         # self.network.apply(weights_init)
 
     def forward(self, state_t):
-        state_t[:,1,:,:]-=state_t[:,0,:,:]
-        state_t[:,2,:,:]-=state_t[:,0,:,:]
-        state_t[:,3,:,:]-=state_t[:,0,:,:]
-        qvalues = self.network(torch.abs(state_t[:,1:]))
+        # state_t[:,1,:,:]-=state_t[:,0,:,:]
+        # state_t[:,2,:,:]-=state_t[:,0,:,:]
+        # state_t[:,3,:,:]-=state_t[:,0,:,:]
+        qvalues = self.network(state_t)
         return qvalues
 
     def get_qvalues(self, states):
