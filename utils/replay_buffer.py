@@ -1,5 +1,6 @@
-# This code is shamelessly stolen from
+# This code is modified on 
 # https://github.com/openai/baselines/blob/master/baselines/deepq/replay_buffer.py
+
 import numpy as np
 import random
 
@@ -13,38 +14,39 @@ class ReplayBuffer(object):
             Max number of transitions to store in the buffer. When the buffer
             overflows the old memories are dropped.
         """
-        self._storage = []
+        self._storage = {"obses_t":[], "actions":[], "rewards":[], "obses_tp1":[], "dones":[]}
         self._maxsize = size
         self._next_idx = 0
+        self._probabilities =0
 
     def __len__(self):
-        return len(self._storage)
+        return len(self._storage["obses_t"])
 
     def add(self, obs_t, action, reward, obs_tp1, done):
-        data = (obs_t, action, reward, obs_tp1, done)
+        data={  "obses_t":np.array([obs_t]),
+                "actions":np.array([action]),
+                "rewards":np.array([reward]),
+                "obses_tp1":np.array([obs_tp1]),
+                "dones":np.array([done])
+            }
+        if len(self)==0:
+            self._storage=data
 
-        if self._next_idx >= len(self._storage):
-            self._storage.append(data)
+        if self._next_idx >= len(self):
+            for k in data.keys():
+                self._storage[k]=np.vstack((self._storage[k],data[k]))
         else:
-            self._storage[self._next_idx] = data
+            for k in data.keys():
+                self._storage[k][self._next_idx] = data[k]
         self._next_idx = (self._next_idx + 1) % self._maxsize
 
     def _encode_sample(self, idxes):
-        obses_t, actions, rewards, obses_tp1, dones = [], [], [], [], []
-        for i in idxes:
-            data = self._storage[i]
-            obs_t, action, reward, obs_tp1, done = data
-            obses_t.append(np.array(obs_t, copy=False))
-            actions.append(np.array(action, copy=False))
-            rewards.append(reward)
-            obses_tp1.append(np.array(obs_tp1, copy=False))
-            dones.append(done)
         return (
-            np.array(obses_t),
-            np.array(actions),
-            np.array(rewards),
-            np.array(obses_tp1),
-            np.array(dones)
+            self._storage["obses_t"][idxes],
+            self._storage["actions"][idxes],
+            self._storage["rewards"][idxes],
+            self._storage["obses_tp1"][idxes],
+            self._storage["dones"][idxes],
         )
 
     def sample(self, batch_size):
