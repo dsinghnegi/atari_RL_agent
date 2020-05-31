@@ -105,10 +105,8 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
         target_qvalues_for_actions = rewards+is_not_done*(gamma*next_state_values)
 
     # mean squared error loss to minimize
-    idx=torch.argsort((predicted_qvalues_for_actions -
-                       target_qvalues_for_actions.detach()) ** 2)[-8:]
-    loss = torch.mean((predicted_qvalues_for_actions[idx] -
-                       target_qvalues_for_actions.detach()[idx]) ** 2)
+    loss = torch.mean((predicted_qvalues_for_actions -
+                       target_qvalues_for_actions.detach()) ** 2)
 
     if check_shapes:
         assert predicted_next_qvalues.data.dim(
