@@ -29,7 +29,7 @@ class DQNAgent(nn.Module):
         # Define your network body here. Please make sure agent is fully contained here
         # nn.Flatten() can be useful
         self.network=nn.Sequential(
-            nn.Conv2d(3,32,3,2),
+            nn.Conv2d(4,32,3,2),
             nn.BatchNorm2d(32),
             nn.ReLU(),
 

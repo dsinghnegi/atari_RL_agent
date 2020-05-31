@@ -6,7 +6,7 @@ import random
 
 
 class ReplayBuffer(object):
-    def __init__(self, priority_replay=False,size,alpha=0.7,beta=0.5,eps=1e-7):
+    def __init__(self,size, priority_replay=False,alpha=0.7,beta=0.5,eps=1e-7):
         """Create Replay buffer.
         Parameters
         ----------
@@ -43,7 +43,7 @@ class ReplayBuffer(object):
             self._probabilities=np.array([1.0])
 
         if self._next_idx >= len(self):
-            self._probabilities=np.vstack(self._probabilities,[self._max_priority()])
+            self._probabilities=np.vstack((self._probabilities,[self._max_priority()]))
             for k in data.keys():
                 self._storage[k]=np.vstack((self._storage[k],data[k]))
         else:
@@ -96,4 +96,4 @@ class ReplayBuffer(object):
             is_weight /= is_weight.max()
         else:
            is_weight=np.ones(len(self.idxes)) 
-        return *self._encode_sample(idxes),is_weight
+        return (*self._encode_sample(idxes),is_weight)

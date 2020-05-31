@@ -62,7 +62,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 		step=int(re.findall(r'\d+', opt.checkpoint)[-1])
 
 
-	exp_replay = ReplayBuffer(10**5,priority_replay)
+	exp_replay = ReplayBuffer(10**4,priority_replay)
 	for i in tqdm(range(100)):
 		if not utils.is_enough_ram(min_available_gb=0.1):
 			print("""
@@ -72,8 +72,8 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 				"""
 				 )
 			break
-		play_and_record(state, agent, env, exp_replay, n_steps=10**3)
-		if len(exp_replay) == 10**5:
+		play_and_record(state, agent, env, exp_replay, n_steps=10**2)
+		if len(exp_replay) == 10**4:
 			break
 
 
