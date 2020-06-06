@@ -30,24 +30,23 @@ class DQNAgent(nn.Module):
         # nn.Flatten() can be useful
         self.network=nn.Sequential(
             nn.Conv2d(4,32,3,2),
+            nn.ReLU(),
             nn.BatchNorm2d(32),
-            nn.ReLU(),
-
+       
             nn.Conv2d(32,64,3,2),
+            nn.ReLU(),
             nn.BatchNorm2d(64),
-            nn.ReLU(),
-
+       
             nn.Conv2d(64,128,3,2),
-            nn.BatchNorm2d(128),
             nn.ReLU(),
+            nn.BatchNorm2d(128),
             
             nn.Conv2d(128,256,3,2),
-            nn.BatchNorm2d(256),
             nn.ReLU(),
-
+            nn.BatchNorm2d(256),
+       
             nn.Flatten(),
             nn.Linear(2304,1024),
-            nn.BatchNorm1d(1024),
             nn.ReLU(),
             nn.Linear(1024,n_actions),
 
@@ -58,6 +57,7 @@ class DQNAgent(nn.Module):
         # state_t[:,1,:,:]-=state_t[:,0,:,:]
         # state_t[:,2,:,:]-=state_t[:,0,:,:]
         # state_t[:,3,:,:]-=state_t[:,0,:,:]
+   
         qvalues = self.network(state_t)
         return qvalues
 
