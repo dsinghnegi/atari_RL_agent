@@ -35,7 +35,7 @@ def get_args():
 
 
 def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
-	timesteps_per_epoch = 1
+	timesteps_per_epoch = 20
 	batch_size = 16
 	total_steps = 3 * 10**6
 
@@ -123,8 +123,8 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 		grad_norm = nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
 		optim.step()
 		exp_replay.update_priority(error)
-
-		# print("--->",loss.data.cpu().item(),grad_norm)
+   
+   
 		if step % loss_freq == 0:
 			td_loss=loss.data.cpu().item()
 			grad_norm=grad_norm
@@ -155,6 +155,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 
 			writer.add_scalar("Mean reward per life", mean_rw, step)
 			writer.add_scalar("Initial state V", initial_state_v, step)
+			writer.close()
 
 	torch.save(agent.state_dict(), os.path.join(checkpoint_path,"agent_{}.pth".format(total_steps)))
 
