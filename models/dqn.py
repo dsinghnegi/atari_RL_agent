@@ -8,63 +8,60 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def weights_init(m):
     classname = m.__class__.__name__
     if classname.find('Conv') != -1:
-        nn.init.normal_(m.weight.data, 0.0, 0.02)
-    elif classname.find('BatchNorm') != -1:
-        nn.init.normal_(m.weight.data, 1.0, 0.02)
-        nn.init.constant_(m.bias.data, 0)
+        nn.init.xavier_normal_(m.weight.data,gain=nn.init.calculate_gain('conv2d'))
     elif type(m) == nn.Linear:
-        torch.nn.init.xavier_uniform(m.weight)
+        nn.init.xavier_normal_(m.weight,gain=nn.init.calculate_gain('linear'))
         m.bias.data.fill_(0.01)
 
 
 
 class DQNAgent(nn.Module):
-    def __init__(self, state_shape, n_actions, epsilon=0):
+    def __init__(self, state_shape, n_actions, epsilon=0,hidden=1024):
 
         super().__init__()
         self.epsilon = epsilon
         self.n_actions = n_actions
         self.state_shape = state_shape
+        self.hidden=hidden
 
         # Define your network body here. Please make sure agent is fully contained here
         # nn.Flatten() can be useful
         self.network=nn.Sequential(
-            nn.Conv2d(4,32,3,2),
+            nn.Conv2d(4,32,8,4,bias=False),
             nn.ReLU(),
-            nn.BatchNorm2d(32),
        
-            nn.Conv2d(32,64,3,2),
+            nn.Conv2d(32,64,4,2,bias=False),
             nn.ReLU(),
-            nn.BatchNorm2d(64),
        
-            nn.Conv2d(64,128,3,2),
+            nn.Conv2d(64,128,3,1,bias=False),
             nn.ReLU(),
-            nn.BatchNorm2d(128),
             
-            nn.Conv2d(128,256,3,2),
+            nn.Conv2d(128,self.hidden,7,1,bias=False),
             nn.ReLU(),
-            nn.BatchNorm2d(256),
-       
-            nn.Flatten(),
-            nn.Linear(2304,1024),
-            nn.ReLU(),
-            nn.Linear(1024,n_actions),
-
         )
-        # self.network.apply(weights_init)
+
+        self.value_network=nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(self.hidden//2,1),
+        )
+
+        self.advantage_network=nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(self.hidden//2,n_actions),
+        )
+
+
+        self.network.apply(weights_init)
 
     def forward(self, state_t):
-        # state_t[:,1,:,:]-=state_t[:,0,:,:]
-        # state_t[:,2,:,:]-=state_t[:,0,:,:]
-        # state_t[:,3,:,:]-=state_t[:,0,:,:]
-   
-        qvalues = self.network(state_t)
+        value_and_advantage = self.network(state_t)
+        value,advantage= torch.split(value_and_advantage,self.hidden//2,1)
+        value=self.value_network(value)
+        advantage=self.advantage_network(advantage) 
+        qvalues = value + (advantage- torch.mean(advantage, axis=1, keepdims=True))
         return qvalues
 
     def get_qvalues(self, states):
-        """
-            like forward, but works on numpy arrays, not tensors
-            """
         with torch.no_grad():
             model_device = next(self.parameters()).device
             states = torch.tensor(states, device=model_device, dtype=torch.float)
