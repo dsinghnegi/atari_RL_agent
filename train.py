@@ -1,7 +1,7 @@
 import os
 import argparse
 import re
-
+import concurrent.futures
 
 from tqdm import tqdm,trange
 import torch
@@ -28,7 +28,7 @@ def get_args():
 	ap.add_argument("-c", "--checkpoint",default=None,help="checkpoint for agent")
 	ap.add_argument( "--double_dqn", default=True ,help="enable double_dqn")
 	ap.add_argument( "--priority_replay", default=True ,help="enable priority replay")
-	ap.add_argument( "--num_thread", default=1 ,help="number of thread for replay")
+	ap.add_argument( "--num_thread",type=int, default=1 ,help="number of thread for replay")
 	
 	opt = ap.parse_args()
 	return opt
@@ -36,14 +36,14 @@ def get_args():
 
 
 def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
-	timesteps_per_epoch = 20
-	batch_size = 16
+	timesteps_per_epoch = 1
+	batch_size = 32
 	total_steps = 3 * 10**6
 
-	optim = torch.optim.Adam(agent.parameters(), lr=1e-4)
+	optim = torch.optim.Adam(agent.parameters(), lr=1e-5)
 
 	init_epsilon = 1
-	final_epsilon = 0.1
+	final_epsilon = 0
 
 	loss_freq = 50
 	refresh_target_network_freq = 5000
@@ -63,7 +63,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 		step=int(re.findall(r'\d+', opt.checkpoint)[-1])
 
 
-	exp_replay = ReplayBuffer(10**4,priority_replay)
+	exp_replay = ReplayBuffer(10**5,priority_replay)
 	for i in tqdm(range(100)):
 		if not utils.is_enough_ram(min_available_gb=0.1):
 			print("""
@@ -74,7 +74,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 				 )
 			break
 		play_and_record(state, agent, env, exp_replay, n_steps=10**2)
-		if len(exp_replay) == 10**4:
+		if len(exp_replay) == 5*10**4:
 			break
 
 
@@ -97,7 +97,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 
 	for i in range(num_thread):
 		env = BNF.make_env()
-		state_agent_dic[i]={
+		state_agent_dict[i]={
 				'state':env.reset(),
 				'env': env,
 				}
@@ -113,41 +113,43 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 				except KeyboardInterrupt:
 					pass
 
-			agent.epsilon = utils.linear_decay(init_epsilon, final_epsilon, step, total_steps)
+			agent.epsilon = utils.step_decay(init_epsilon, final_epsilon, step, total_steps)
 
 			# play
 			# _, state = play_and_record(state, agent, env, exp_replay, timesteps_per_epoch)
+			# print([i for i in state_agent_dict.keys()])
 
 			future_to_play = {
-					executor.submit(play_and_record,state_agent_dic['state'], agent, state_agent_dic['env'], exp_replay, timesteps_per_epoch): i 
-					for i in state_agent_dic.keys()
+					executor.submit(play_and_record,state_agent_dict[i]['state'], agent, state_agent_dict[i]['env'], exp_replay, timesteps_per_epoch): i 
+					for i in state_agent_dict.keys()
 					}
 			
 			for future in concurrent.futures.as_completed(future_to_play):
 				i = future_to_play[future]
 				try:
 					_,state = future.result()
-					state_agent_dic[i]=state
+					state_agent_dict[i]['state']=state
 				except :
 					print("error for #env{}".format(i))
 
-			# train
+				# train
+		
 			states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,is_weight=exp_replay.sample(batch_size)
 			optim.zero_grad()
 
 			loss,error = compute_td_loss(states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,
-							agent, target_network,is_weight,
-							gamma=0.99,
-							check_shapes=False,
-							device=device,
-							double_dqn=double_dqn)
+					agent, target_network,is_weight,
+					gamma=0.99,
+					check_shapes=False,
+					device=device,
+					double_dqn=double_dqn)
 
 			loss.backward()
 			grad_norm = nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
 			optim.step()
 			exp_replay.update_priority(error)
-	   
-	   
+  
+		   
 			if step % loss_freq == 0:
 				td_loss=loss.data.cpu().item()
 				grad_norm=grad_norm
