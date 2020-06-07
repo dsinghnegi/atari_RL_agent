@@ -83,6 +83,23 @@ def linear_decay(init_val, final_val, cur_step, total_steps):
             final_val * cur_step) / total_steps
 
 
+
+def step_decay(init_val, final_val, cur_step, total_steps):
+    if cur_step < 10000:
+        return init_val
+
+    if cur_step <5*10**5:
+        total_steps=min(total_steps,5*10**5)
+        cur_step-=10000
+        total_steps-=10000
+        return (init_val * (total_steps - cur_step) +
+            0.1 * cur_step) / (total_steps)
+    
+    cur_step-=5*10**5
+    total_steps-=5*10**5
+    return (init_val * (total_steps- cur_step) +
+            final_val* cur_step) / (total_steps-1000000)
+
 def smoothen(values):
     kernel = gaussian(100, std=100)
     # kernel = np.concatenate([np.arange(100), np.arange(99, -1, -1)])
