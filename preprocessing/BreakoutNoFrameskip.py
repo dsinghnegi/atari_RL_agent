@@ -14,7 +14,7 @@ class PreprocessAtariObs(ObservationWrapper):
         """A gym wrapper that crops, scales image into the desired shapes and grayscales it."""
         ObservationWrapper.__init__(self, env)
 
-        self.img_size = (1, 64, 64)
+        self.img_size = (1, 84, 84)
         self.observation_space = Box(0.0, 1.0, self.img_size)
 
 
@@ -33,14 +33,16 @@ class PreprocessAtariObs(ObservationWrapper):
         #      e.g. opencv, skimage, PIL, keras)
         #  * cast image to grayscale
         #  * convert image pixels to (0,1) range, float32 type
+        
         img=img[30:-15,:]
-        img=cv2.resize(img,(64,64))
+        print(img.shape)
+        img=cv2.resize(img,self.img_size[1:])
         
         img=img.astype('float32')/255.0
         img=self._to_gray_scale(img)
         # print(img.shape)
 
-        return img.reshape(-1,64,64)
+        return img.reshape(self.img_size)
 
 
 def PrimaryAtariWrap(env, clip_rewards=True):
