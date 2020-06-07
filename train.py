@@ -28,6 +28,7 @@ def get_args():
 	ap.add_argument("-c", "--checkpoint",default=None,help="checkpoint for agent")
 	ap.add_argument( "--double_dqn", default=True ,help="enable double_dqn")
 	ap.add_argument( "--priority_replay", default=True ,help="enable priority replay")
+	ap.add_argument( "--num_thread", default=1 ,help="number of thread for replay")
 	
 	opt = ap.parse_args()
 	return opt
@@ -48,11 +49,11 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 	refresh_target_network_freq = 5000
 	eval_freq = 5000
 
-	max_grad_norm = 2.0
+	max_grad_norm = 20.0
 
 	n_lives = 5
 	priority_replay=opt.priority_replay
-
+	num_thread=opt.num_thread
 	step = 0
 
 	state = env.reset()
@@ -92,68 +93,90 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 	
 	loss=10**6
 
-	state = env.reset()
-	for step in trange(step,total_steps + 1):
-		if not utils.is_enough_ram():
-			print('less that 100 Mb RAM available, freezing')
-			print('make sure everythin is ok and make KeyboardInterrupt to continue')
-			try:
-				while True:
+	state_agent_dict={}
+
+	for i in range(num_thread):
+		env = BNF.make_env()
+		state_agent_dic[i]={
+				'state':env.reset(),
+				'env': env,
+				}
+	
+	with concurrent.futures.ThreadPoolExecutor(max_workers=num_thread) as executor:
+		for step in trange(step,total_steps + 1):
+			if not utils.is_enough_ram():
+				print('less that 100 Mb RAM available, freezing')
+				print('make sure everythin is ok and make KeyboardInterrupt to continue')
+				try:
+					while True:
+						pass
+				except KeyboardInterrupt:
 					pass
-			except KeyboardInterrupt:
-				pass
 
-		agent.epsilon = utils.linear_decay(init_epsilon, final_epsilon, step, total_steps)
+			agent.epsilon = utils.linear_decay(init_epsilon, final_epsilon, step, total_steps)
 
-		# play
-		_, state = play_and_record(state, agent, env, exp_replay, timesteps_per_epoch)
+			# play
+			# _, state = play_and_record(state, agent, env, exp_replay, timesteps_per_epoch)
 
-		# train
-		states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,is_weight=exp_replay.sample(batch_size)
-		optim.zero_grad()
-
-		loss,error = compute_td_loss(states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,
-						agent, target_network,is_weight,
-						gamma=0.99,
-						check_shapes=False,
-						device=device,
-						double_dqn=double_dqn)
-
-		loss.backward()
-		grad_norm = nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
-		optim.step()
-		exp_replay.update_priority(error)
-   
-   
-		if step % loss_freq == 0:
-			td_loss=loss.data.cpu().item()
-			grad_norm=grad_norm
-
-			assert not np.isnan(td_loss)
-			writer.add_scalar("Training/TD loss history",td_loss,step)
-			writer.add_scalar("Training/Grad norm history",grad_norm,step)
-
-
-		if step % refresh_target_network_freq == 0:
-			target_network.load_state_dict(agent.state_dict())
-			torch.save(agent.state_dict(), os.path.join(checkpoint_path,"agent_{}.pth".format(step)))
-
-		if step % eval_freq == 0:
-			mean_rw=evaluate(make_env(clip_rewards=True, seed=step), agent, n_games=3 * n_lives, greedy=True)
+			future_to_play = {
+					executor.submit(play_and_record,state_agent_dic['state'], agent, state_agent_dic['env'], exp_replay, timesteps_per_epoch): i 
+					for i in state_agent_dic.keys()
+					}
 			
-			initial_state_q_values = agent.get_qvalues(
-				[make_env(seed=step).reset()]
-			)
-			initial_state_v=np.max(initial_state_q_values)
+			for future in concurrent.futures.as_completed(future_to_play):
+				i = future_to_play[future]
+				try:
+					_,state = future.result()
+					state_agent_dic[i]=state
+				except :
+					print("error for #env{}".format(i))
 
-		
-			print("buffer size = %i, epsilon = %.5f, mean_rw=%.2f, initial_state_v= %.2f"   % (len(exp_replay), agent.epsilon, mean_rw, initial_state_v))
+			# train
+			states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,is_weight=exp_replay.sample(batch_size)
+			optim.zero_grad()
 
-			writer.add_scalar("Evaluation/Mean reward per life", mean_rw, step)
-			writer.add_scalar("Evaluation/Initial state V", initial_state_v, step)
-			writer.close()
+			loss,error = compute_td_loss(states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,
+							agent, target_network,is_weight,
+							gamma=0.99,
+							check_shapes=False,
+							device=device,
+							double_dqn=double_dqn)
 
-	torch.save(agent.state_dict(), os.path.join(checkpoint_path,"agent_{}.pth".format(total_steps)))
+			loss.backward()
+			grad_norm = nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
+			optim.step()
+			exp_replay.update_priority(error)
+	   
+	   
+			if step % loss_freq == 0:
+				td_loss=loss.data.cpu().item()
+				grad_norm=grad_norm
+
+				assert not np.isnan(td_loss)
+				writer.add_scalar("Training/TD loss history",td_loss,step)
+				writer.add_scalar("Training/Grad norm history",grad_norm,step)
+
+
+			if step % refresh_target_network_freq == 0:
+				target_network.load_state_dict(agent.state_dict())
+				torch.save(agent.state_dict(), os.path.join(checkpoint_path,"agent_{}.pth".format(step)))
+
+			if step % eval_freq == 0:
+				mean_rw=evaluate(make_env(clip_rewards=True, seed=step), agent, n_games=3 * n_lives, greedy=True)
+				
+				initial_state_q_values = agent.get_qvalues(
+					[make_env(seed=step).reset()]
+				)
+				initial_state_v=np.max(initial_state_q_values)
+
+			
+				print("buffer size = %i, epsilon = %.5f, mean_rw=%.2f, initial_state_v= %.2f"   % (len(exp_replay), agent.epsilon, mean_rw, initial_state_v))
+
+				writer.add_scalar("Evaluation/Mean reward per life", mean_rw, step)
+				writer.add_scalar("Evaluation/Initial state V", initial_state_v, step)
+				writer.close()
+
+		torch.save(agent.state_dict(), os.path.join(checkpoint_path,"agent_{}.pth".format(total_steps)))
 
 
 def main():
