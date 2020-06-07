@@ -130,12 +130,8 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 			grad_norm=grad_norm
 
 			assert not np.isnan(td_loss)
-			writer.add_scalar("TD loss history (smoothened)",
-                            utils.smoothen([td_loss])[-1],
-                            step)
-			writer.add_scalar("Grad norm history (smoothened)",
-                            utils.smoothen([grad_norm])[-1],
-                            step)
+			writer.add_scalar("TD loss history (smoothened)",td_loss,step)
+			writer.add_scalar("Grad norm history (smoothened)",grad_norm,step)
 
 
 		if step % refresh_target_network_freq == 0:
