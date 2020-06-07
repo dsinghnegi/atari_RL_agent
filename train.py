@@ -130,8 +130,8 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 			grad_norm=grad_norm
 
 			assert not np.isnan(td_loss)
-			writer.add_scalar("TD loss history (smoothened)",td_loss,step)
-			writer.add_scalar("Grad norm history (smoothened)",grad_norm,step)
+			writer.add_scalar("Training/TD loss history",td_loss,step)
+			writer.add_scalar("Training/Grad norm history",grad_norm,step)
 
 
 		if step % refresh_target_network_freq == 0:
@@ -149,8 +149,8 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 		
 			print("buffer size = %i, epsilon = %.5f, mean_rw=%.2f, initial_state_v= %.2f"   % (len(exp_replay), agent.epsilon, mean_rw, initial_state_v))
 
-			writer.add_scalar("Mean reward per life", mean_rw, step)
-			writer.add_scalar("Initial state V", initial_state_v, step)
+			writer.add_scalar("Evaluation/Mean reward per life", mean_rw, step)
+			writer.add_scalar("Evaluation/Initial state V", initial_state_v, step)
 			writer.close()
 
 	torch.save(agent.state_dict(), os.path.join(checkpoint_path,"agent_{}.pth".format(total_steps)))
