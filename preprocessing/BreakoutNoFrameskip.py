@@ -35,7 +35,6 @@ class PreprocessAtariObs(ObservationWrapper):
         #  * convert image pixels to (0,1) range, float32 type
         
         img=img[30:-15,:]
-        print(img.shape)
         img=cv2.resize(img,self.img_size[1:])
         
         img=img.astype('float32')/255.0
