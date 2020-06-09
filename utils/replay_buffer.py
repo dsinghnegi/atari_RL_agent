@@ -44,7 +44,7 @@ class ReplayBuffer(object):
             self._probabilities[0]=1.0
             for k in data.keys():
               self._storage[k]=np.zeros(( self._maxsize,*data[k].shape[1:]),dtype=data[k].dtype)
-           
+          
 
         self._probabilities[self._next_idx]=self._max_priority()
         for k in data.keys():
@@ -87,7 +87,8 @@ class ReplayBuffer(object):
             done_mask[i] = 1 if executing act_batch[i] resulted in
             the end of an episode and 0 otherwise.
         """
-        probabilities=self._probabilities/np.sum(self._probabilities)
+        probabilities=self._probabilities[:len(self)]/np.sum(self._probabilities[:len(self)])
+        
         self.idxes = np.random.choice(
                   range(len(self)), 
                   batch_size,
@@ -97,5 +98,5 @@ class ReplayBuffer(object):
             is_weight = np.power(len(self) * probabilities[self.idxes], -self.beta)
             is_weight /= is_weight.max()
         else:
-           is_weight=np.ones(len(self.idxes)) 
+          is_weight=np.ones(len(self.idxes)) 
         return (*self._encode_sample(self.idxes),is_weight)
