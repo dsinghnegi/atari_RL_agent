@@ -40,15 +40,15 @@ def play_and_record(initial_state, agent, env, exp_replay, n_steps=1):
     for _ in range(n_steps):
       qvalues = agent.get_qvalues([s])
       action=agent.sample_actions(qvalues)[0]
-      # action = qvalues.argmax(axis=-1)[0]
+      
       s_n, r, done, _ = env.step(action)
-
+      r= -1.0 if done else r
       exp_replay.add(s, action, r, s_n, done)
       sum_rewards+=r
       s=s_n
       if done:
         s=env.reset()
-
+          
     return sum_rewards, s
 
 
@@ -57,6 +57,8 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
                     gamma=0.99,
                     check_shapes=False,
                     device=torch.device('cpu'),double_dqn=True):
+    
+  
     """ Compute td loss using torch operations only. Use the formulae above. """
     states = torch.tensor(states, device=device, dtype=torch.float)    # shape: [batch_size, *state_shape]
 
@@ -71,10 +73,10 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
         dtype=torch.float
     )  # shape: [batch_size]
     is_not_done = 1 - is_done
-
+    
     # get q-values for all actions in current states
-    predicted_qvalues = agent(states)
 
+    predicted_qvalues = agent(states)
 
      # select q-values for chosen actions
     predicted_qvalues_for_actions = predicted_qvalues[range(
@@ -89,12 +91,10 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
         next_actions=agent(next_states).argmax(axis=-1)
     else:
         next_actions=target_network(next_states).argmax(axis=-1)
-        
 
     # compute V*(next_states) using predicted next q-values
     next_state_values=predicted_next_qvalues[range(len(next_actions)), next_actions]
 
-    # print(next_state_values.dim(),next_state_values.shape[0])
     assert next_state_values.dim(
     ) == 1 and next_state_values.shape[0] == states.shape[0], "must predict one value per state"
 
@@ -104,12 +104,12 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
     # print(predicted_qvalues.shape,rewards.shape)
     target_qvalues_for_actions = rewards+is_not_done*(gamma*next_state_values)
 
-    # mean squared error loss to minimize
     error=torch.abs(predicted_qvalues_for_actions -
                        target_qvalues_for_actions.detach())
     
-    loss = torch.mean(torch.from_numpy(is_weight).to(device).detach()* torch.pow(predicted_qvalues_for_actions -
-                       target_qvalues_for_actions.detach(), 2))
+    loss =torch.mean(torch.from_numpy(is_weight).to(device).detach()
+                * torch.pow(predicted_qvalues_for_actions - target_qvalues_for_actions.detach(),2))
+
 
     if check_shapes:
         assert predicted_next_qvalues.data.dim(
