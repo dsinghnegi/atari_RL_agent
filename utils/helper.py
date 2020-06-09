@@ -39,7 +39,8 @@ def play_and_record(initial_state, agent, env, exp_replay, n_steps=1):
     # Play the game for n_steps as per instructions above
     for _ in range(n_steps):
       qvalues = agent.get_qvalues([s])
-      action = qvalues.argmax(axis=-1)[0]
+      action=agent.sample_actions(qvalues)[0]
+      # action = qvalues.argmax(axis=-1)[0]
       s_n, r, done, _ = env.step(action)
 
       exp_replay.add(s, action, r, s_n, done)
