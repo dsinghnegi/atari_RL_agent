@@ -8,15 +8,15 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def weights_init(m):
     classname = m.__class__.__name__
     if classname.find('Conv') != -1:
-        nn.init.xavier_normal_(m.weight.data,gain=nn.init.calculate_gain('conv2d'))
+        nn.init.xavier_normal_(m.weight.data,gain=nn.init.calculate_gain('relu'))
     elif type(m) == nn.Linear:
-        nn.init.xavier_normal_(m.weight,gain=nn.init.calculate_gain('linear'))
+        nn.init.xavier_normal_(m.weight,gain=nn.init.calculate_gain('relu'))
         m.bias.data.fill_(0.01)
 
 
 
 class DQNAgent(nn.Module):
-    def __init__(self, state_shape, n_actions, epsilon=0,hidden=1024):
+    def __init__(self, state_shape, n_actions, epsilon=0,hidden=512):
 
         super().__init__()
         self.epsilon = epsilon
@@ -51,7 +51,7 @@ class DQNAgent(nn.Module):
         )
 
 
-        self.network.apply(weights_init)
+        # self.network.apply(weights_init)
 
     def forward(self, state_t):
         value_and_advantage = self.network(state_t)
@@ -65,7 +65,7 @@ class DQNAgent(nn.Module):
         with torch.no_grad():
             model_device = next(self.parameters()).device
             states = torch.tensor(states, device=model_device, dtype=torch.float)
-            qvalues = self.forward(states)
+            qvalues = self(states)
         return qvalues.data.cpu().numpy()
 
     def sample_actions(self, qvalues):
