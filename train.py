@@ -37,7 +37,7 @@ def get_args():
 
 def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 	timesteps_per_epoch = 1
-	batch_size = 32
+	batch_size = 16
 	total_steps = 3 * 10**6
 
 	optim = torch.optim.Adam(agent.parameters(), lr=1e-5)
@@ -53,6 +53,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 
 	n_lives = 5
 	priority_replay=opt.priority_replay
+
 	num_thread=opt.num_thread
 	step = 0
 
@@ -63,7 +64,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 		step=int(re.findall(r'\d+', opt.checkpoint)[-1])
 
 
-	exp_replay = ReplayBuffer(10**5,priority_replay)
+	exp_replay = ReplayBuffer(10**4,priority_replay)
 	for i in tqdm(range(100)):
 		if not utils.is_enough_ram(min_available_gb=0.1):
 			print("""
@@ -74,7 +75,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 				 )
 			break
 		play_and_record(state, agent, env, exp_replay, n_steps=10**2)
-		if len(exp_replay) == 5*10**4:
+		if len(exp_replay) == 5*10**3:
 			break
 
 
@@ -83,6 +84,9 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 
 	if double_dqn:
 		print("Double DQN will be used for loss")
+
+	if priority_replay:
+		print("Priority replay")
 
 
 

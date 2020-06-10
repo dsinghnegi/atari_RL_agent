@@ -55,10 +55,6 @@ class DQNAgent(nn.Module):
         # print(state_t.size())
         qvalues = self.network(state_t)
 
-        assert qvalues.requires_grad, "qvalues must be a torch tensor with grad"
-        assert len(
-            qvalues.shape) == 2 and qvalues.shape[0] == state_t.shape[0] and qvalues.shape[1] == n_actions
-
         return qvalues
 
     def get_qvalues(self, states):
