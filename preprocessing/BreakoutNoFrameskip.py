@@ -14,7 +14,7 @@ class PreprocessAtariObs(ObservationWrapper):
         """A gym wrapper that crops, scales image into the desired shapes and grayscales it."""
         ObservationWrapper.__init__(self, env)
 
-        self.img_size = (1, 84, 84)
+        self.img_size = (1, 64, 64)
         self.observation_space = Box(0.0, 1.0, self.img_size)
 
 
