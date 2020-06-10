@@ -14,58 +14,60 @@ def weights_init(m):
         m.bias.data.fill_(0.01)
 
 
-
 class DQNAgent(nn.Module):
-    def __init__(self, state_shape, n_actions, epsilon=0,hidden=512):
+    def __init__(self, state_shape, n_actions, epsilon=0):
 
         super().__init__()
         self.epsilon = epsilon
         self.n_actions = n_actions
         self.state_shape = state_shape
-        self.hidden=hidden
 
         # Define your network body here. Please make sure agent is fully contained here
         # nn.Flatten() can be useful
         self.network=nn.Sequential(
-            nn.Conv2d(4,32,8,4,bias=False),
+            nn.Conv2d(4,32,3,2),
+            nn.BatchNorm2d(32),
             nn.ReLU(),
-       
-            nn.Conv2d(32,64,4,2,bias=False),
+
+            nn.Conv2d(32,64,3,2),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
-       
-            nn.Conv2d(64,128,3,1,bias=False),
+
+            nn.Conv2d(64,128,3,2),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
             
-            nn.Conv2d(128,self.hidden,7,1,bias=False),
+            nn.Flatten(),
+            nn.Linear(6272,1024),
+            # nn.BatchNorm2d(256),
             nn.ReLU(),
+            nn.Linear(1024,n_actions),
+
         )
-
-        self.value_network=nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(self.hidden//2,1),
-        )
-
-        self.advantage_network=nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(self.hidden//2,n_actions),
-        )
-
-
-        # self.network.apply(weights_init)
+        
 
     def forward(self, state_t):
-        value_and_advantage = self.network(state_t)
-        value,advantage= torch.split(value_and_advantage,self.hidden//2,1)
-        value=self.value_network(value)
-        advantage=self.advantage_network(advantage) 
-        qvalues = value + (advantage- torch.mean(advantage, axis=1, keepdims=True))
+        """
+        takes agent's observation (tensor), returns qvalues (tensor)
+        :param state_t: a batch of 4-frame buffers, shape = [batch_size, 4, h, w]
+        """
+        # Use your network to compute qvalues for given state
+        # print(state_t.size())
+        qvalues = self.network(state_t)
+
+        assert qvalues.requires_grad, "qvalues must be a torch tensor with grad"
+        assert len(
+            qvalues.shape) == 2 and qvalues.shape[0] == state_t.shape[0] and qvalues.shape[1] == n_actions
+
         return qvalues
 
     def get_qvalues(self, states):
-        with torch.no_grad():
-            model_device = next(self.parameters()).device
-            states = torch.tensor(states, device=model_device, dtype=torch.float)
-            qvalues = self(states)
+        """
+        like forward, but works on numpy arrays, not tensors
+        """
+        model_device = next(self.parameters()).device
+        states = torch.tensor(states, device=model_device, dtype=torch.float)
+        qvalues = self.forward(states)
         return qvalues.data.cpu().numpy()
 
     def sample_actions(self, qvalues):
@@ -79,4 +81,3 @@ class DQNAgent(nn.Module):
         should_explore = np.random.choice(
             [0, 1], batch_size, p=[1-epsilon, epsilon])
         return np.where(should_explore, random_actions, best_actions)
-
