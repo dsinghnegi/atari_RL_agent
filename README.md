@@ -1,4 +1,4 @@
-## This repository is under construction
+## This repository is under development
 
 # Atari RL agent
 Reinforcement learining based agent for playing atari games.
