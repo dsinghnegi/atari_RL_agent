@@ -3,22 +3,21 @@ import argparse
 import re
 import concurrent.futures
 
-from tqdm import tqdm,trange
 import torch
+from torch import nn
+from torch.utils.tensorboard import SummaryWriter
+
+from tqdm import tqdm,trange
 import numpy as np
 import matplotlib.pyplot as plt
 
 from models.dqn import DQNAgent
-from preprocessing import BreakoutNoFrameskip as BNF
 from utils.replay_buffer import ReplayBuffer
 from utils import utils
 from utils.helper import play_and_record, compute_td_loss, evaluate
-from torch import nn
-from torch.utils.tensorboard import SummaryWriter
+import environment 
 
 
-
-ENV_LIST=['BreakoutNoFrameskip-v4']
 
 def get_args():
 	ap = argparse.ArgumentParser()
@@ -188,8 +187,8 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 def main():
 	opt=get_args()	
 
-	assert opt.environment in ENV_LIST, \
-		"Unsupported environment: {} \nSupported environemt: {}".format(opt.environment, ENV_LIST)
+	assert opt.environment in environment.ENV_DICT.keys(), \
+		"Unsupported environment: {} \nSupported environemts: {}".format(opt.environment, environment.ENV_DICT.keys())
 
 
 	writer = SummaryWriter(opt.log_dir)
@@ -199,7 +198,9 @@ def main():
 
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-	env = BNF.make_env()
+	ENV=environment.ENV_DICT[opt.environment]
+
+	env = ENV.make_env()
 	state_shape = env.observation_space.shape
 	n_actions = env.action_space.n
 		
@@ -212,7 +213,7 @@ def main():
 	writer.add_graph(agent,torch.tensor([env.reset()]).to(device))
 	writer.close()
 
-	train(env,BNF.make_env,agent,target_network,device,writer,checkpoint_path,opt)
+	train(env,ENV.make_env,agent,target_network,device,writer,checkpoint_path,opt)
 	
 
 
