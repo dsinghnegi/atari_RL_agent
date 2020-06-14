@@ -36,7 +36,7 @@ def main():
 
 	ENV=environment.ENV_DICT[opt.environment]
 
-	env = ENV.make_env(clip_rewards=False)
+	env = ENV.make_env()
 
 
 	state_shape = env.observation_space.shape
@@ -44,10 +44,9 @@ def main():
 
 	agent = DQNAgent(state_shape, n_actions).to(device)
 	agent.load_state_dict(torch.load(opt.checkpoint))
-	agent.eval()
 
-	env_monitor = gym.wrappers.Monitor(ENV.make_env(clip_rewards=False), directory=opt.video, force=True)
-	sessions = [evaluate(env_monitor, agent, n_games=opt.n_lives, greedy=True) for _ in range(5)]
+	env_monitor = gym.wrappers.Monitor(ENV.make_env(), directory=opt.video, force=True)
+	sessions = [evaluate(env_monitor, agent, n_games=opt.n_lives, greedy=True) for _ in range(2)]
 	print(sessions)
 	env_monitor.close()
 
