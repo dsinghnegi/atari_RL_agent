@@ -12,8 +12,11 @@ Reinforcement learining based agent for playing atari games.
 
 
 ## Game Play
+### Pong
+Agent has learned a nice trick to defeate the opponnent.
 
-![Breakout](videos/openaigym.video.0.19439.video000001.gif) ![Pong](images/pong.gif)
+![Pong](images/pong.gif)
+
 
 ## Supported Environment
 - [x] BreakoutNoFrameskip-v4
