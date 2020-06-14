@@ -2,7 +2,8 @@
 
 # Atari RL agent
 Reinforcement learining based agent for playing atari games.
-## DQN agent
+
+## Agents
 - DQN
 - Double DQN
 - Prioritized Replay
@@ -10,12 +11,18 @@ Reinforcement learining based agent for playing atari games.
 
 
 
-## Breakout Game Play
-![image info](videos/openaigym.video.0.19439.video000001.gif)
+## Game Play
+
+![Breakout](videos/openaigym.video.0.19439.video000001.gif) ![Pong](images/pong.gif)
+
+## Supported Environment
+- [x] BreakoutNoFrameskip-v4
+- [x] PongNoFrameskip-v4
 
 ## TODO
 - [x] DQN
 - [x] Double DQN
 - [x] Prioritized replay
 - [x] Dueling network
+- [X] Train model for Pong
 - [ ] Achive 300+ score on breakout
