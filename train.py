@@ -25,8 +25,8 @@ def get_args():
 	ap.add_argument("-l", "--log_dir", default="logs" ,help="logs dir for tensorboard")
 	ap.add_argument("-t", "--train_dir", default="train_dir" ,help="checkpoint directory for tensorboard")
 	ap.add_argument("-c", "--checkpoint",default=None,help="checkpoint for agent")
-	ap.add_argument( "--double_dqn", default=True ,help="enable double_dqn")
-	ap.add_argument( "--priority_replay", default=True ,help="enable priority replay")
+	ap.add_argument("--double_dqn",action='store_true',help="enable double_dqn")
+	ap.add_argument( "--priority_replay",action='store_true',help="enable priority replay")
 	ap.add_argument( "--num_thread",type=int, default=1 ,help="number of thread for replay")
 	
 	opt = ap.parse_args()
@@ -35,9 +35,9 @@ def get_args():
 
 
 def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
-	timesteps_per_epoch = 1
+	timesteps_per_epoch = 4
 	batch_size = 16
-	total_steps = 3 * 10**6
+	total_steps = 3 * 10**5
 
 	optim = torch.optim.Adam(agent.parameters(), lr=1e-5)
 
@@ -45,8 +45,8 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 	final_epsilon = 0
 
 	loss_freq = 50
-	refresh_target_network_freq = 5000
-	eval_freq = 5000
+	refresh_target_network_freq = 3000
+	eval_freq = 3000
 
 	max_grad_norm = 20.0
 
@@ -106,7 +106,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 				}
 	
 	with concurrent.futures.ThreadPoolExecutor(max_workers=num_thread) as executor:
-		for step in trange(step,total_steps + 1):
+		for step in trange(step,total_steps + 1,num_thread):
 			if not utils.is_enough_ram():
 				print('less that 100 Mb RAM available, freezing')
 				print('make sure everythin is ok and make KeyboardInterrupt to continue')
@@ -116,7 +116,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 				except KeyboardInterrupt:
 					pass
 
-			agent.epsilon = utils.step_decay(init_epsilon, final_epsilon, step, total_steps)
+			agent.epsilon = utils.linear_decay(init_epsilon, final_epsilon, step, total_steps)
 
 			# play
 			# _, state = play_and_record(state, agent, env, exp_replay, timesteps_per_epoch)
@@ -136,22 +136,22 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 					print("error for #env{}".format(i))
 
 				# train
-		
-			states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,is_weight=exp_replay.sample(batch_size)
-			optim.zero_grad()
+			for _ in range(num_thread):
+				states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,is_weight=exp_replay.sample(batch_size)
+				optim.zero_grad()
 
-			loss,error = compute_td_loss(states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,
-					agent, target_network,is_weight,
-					gamma=0.99,
-					check_shapes=False,
-					device=device,
-					double_dqn=double_dqn)
+				loss,error = compute_td_loss(states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,
+						agent, target_network,is_weight,
+						gamma=0.99,
+						check_shapes=False,
+						device=device,
+						double_dqn=double_dqn)
 
-			loss.backward()
-			grad_norm = nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
-			optim.step()
-			exp_replay.update_priority(error)
-  
+				loss.backward()
+				grad_norm = nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
+				optim.step()
+				exp_replay.update_priority(error)
+	  
 		   
 			if step % loss_freq == 0:
 				td_loss=loss.data.cpu().item()
