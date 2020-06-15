@@ -99,7 +99,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 	state_agent_dict={}
 
 	for i in range(num_thread):
-		env = BNF.make_env()
+		env = make_env()
 		state_agent_dict[i]={
 				'state':env.reset(),
 				'env': env,
