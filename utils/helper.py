@@ -4,19 +4,20 @@ import numpy as np
 def evaluate(env, agent, n_games=1, greedy=False, t_max=10000):
     """ Plays n_games full games. If greedy, picks actions as argmax(qvalues). Returns mean reward. """
     rewards = []
+    reward = 0
+
     for _ in range(n_games):
         s = env.reset()
-        reward = 0
         for _ in range(t_max):
             qvalues = agent.get_qvalues([s])
             action = qvalues.argmax(axis=-1)[0] if greedy else agent.sample_actions(qvalues)[0]
             s, r, done, _ = env.step(action)
             reward += r
- 
+           
             if done:
                 break
 
-        rewards.append(reward)
+    rewards.append(reward)
     return np.mean(rewards)
 
 
