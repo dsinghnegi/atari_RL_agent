@@ -5,7 +5,7 @@ import torch
 import numpy as np
 import gym
 
-from models.dqn import DQNAgent
+from models import DQNAgent
 from utils.helper import evaluate
 
 import environment 
@@ -15,6 +15,7 @@ def get_args():
 	ap = argparse.ArgumentParser()
 	ap.add_argument("-e", "--environment", default="BreakoutNoFrameskip-v4" ,help="envirement to play")
 	ap.add_argument("-c", "--checkpoint",required=True ,help="checkpoint for agent")
+	ap.add_argument("--dueling",action='store_true',help="enable dueling dqn")
 	ap.add_argument("-v", "--video", default="videos" ,help="videos_dir")
 	ap.add_argument("-n", "--n_lives", default=5 ,help="number of n_lives")
 
@@ -42,7 +43,7 @@ def main():
 	state_shape = env.observation_space.shape
 	n_actions = env.action_space.n
 
-	agent = DQNAgent(state_shape, n_actions).to(device)
+	agent = DQNAgent(dueling=opt.dueling,state_shape=state_shape, n_actions=n_actions).to(device)
 	agent.load_state_dict(torch.load(opt.checkpoint))
 
 	env_monitor = gym.wrappers.Monitor(ENV.make_env(), directory=opt.video, force=True)

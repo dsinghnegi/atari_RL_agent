@@ -11,7 +11,7 @@ from tqdm import tqdm,trange
 import numpy as np
 import matplotlib.pyplot as plt
 
-from models.dqn import DQNAgent
+from models import DQNAgent
 from utils.replay_buffer import ReplayBuffer
 from utils import utils
 from utils.helper import play_and_record, compute_td_loss, evaluate
@@ -26,6 +26,7 @@ def get_args():
 	ap.add_argument("-t", "--train_dir", default="train_dir" ,help="checkpoint directory for tensorboard")
 	ap.add_argument("-c", "--checkpoint",default=None,help="checkpoint for agent")
 	ap.add_argument("--double_dqn",action='store_true',help="enable double_dqn")
+	ap.add_argument("--dueling",action='store_true',help="enable dueling dqn")
 	ap.add_argument( "--priority_replay",action='store_true',help="enable priority replay")
 	ap.add_argument( "--num_thread",type=int, default=1 ,help="number of thread for replay")
 	
@@ -205,10 +206,8 @@ def main():
 	n_actions = env.action_space.n
 		
 
-	agent = DQNAgent(state_shape, n_actions, epsilon=1).to(device)
-	target_network = DQNAgent(state_shape, n_actions).to(device)
-
-	
+	agent = DQNAgent(dueling=opt.dueling,state_shape=state_shape, n_actions=n_actions, epsilon=1).to(device)
+	target_network = DQNAgent(dueling=opt.dueling,state_shape=state_shape, n_actions=n_actions).to(device)
 
 	writer.add_graph(agent,torch.tensor([env.reset()]).to(device))
 	writer.close()
