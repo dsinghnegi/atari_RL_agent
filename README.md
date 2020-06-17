@@ -31,7 +31,7 @@ Agent has learned a nice trick to defeate the opponnent.
 - [X] Train model for Pong
 - [ ] Achive 300+ score on breakout
 
-## References and others open-source work used
+## References
 - https://github.com/yandexdataschool/Practical_RL
 - https://github.com/openai/baselines/blob/master/baselines/deepq/replay_buffer.py
 - https://towardsdatascience.com/tutorial-double-deep-q-learning-with-dueling-network-architectures-4c1b3fb7f756
