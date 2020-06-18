@@ -24,8 +24,15 @@ Agent has learned a nice trick to defeate the opponnent.
 
 ## TODO
 - [x] DQN
+- [x] TensorBoard support
 - [x] Double DQN
 - [x] Prioritized replay
 - [x] Dueling network
 - [X] Train model for Pong
 - [ ] Achive 300+ score on breakout
+
+## References
+- https://github.com/yandexdataschool/Practical_RL
+- https://github.com/openai/baselines/blob/master/baselines/deepq/replay_buffer.py
+- https://towardsdatascience.com/tutorial-double-deep-q-learning-with-dueling-network-architectures-4c1b3fb7f756
+
