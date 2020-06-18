@@ -26,24 +26,40 @@ class DQNAgent(nn.Module):
         # nn.Flatten() can be useful
         self.network=nn.Sequential(
             nn.Conv2d(4,32,3,2),
-            nn.BatchNorm2d(32),
             nn.ReLU(),
+            nn.BatchNorm2d(32),
+
 
             nn.Conv2d(32,64,3,2),
-            nn.BatchNorm2d(64),
             nn.ReLU(),
+            nn.BatchNorm2d(64),
+
 
             nn.Conv2d(64,128,3,2),
-            nn.BatchNorm2d(128),
             nn.ReLU(),
+            nn.BatchNorm2d(128),
             
+            nn.Conv2d(128,256,3,2),
+            nn.ReLU(),
+            nn.BatchNorm2d(256),
+
             nn.Flatten(),
-            nn.Linear(6272,1024),
+            nn.Linear(2304,1024),
             # nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.Linear(1024,n_actions),
 
         )
+        
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+        
         
 
     def forward(self, state_t):
