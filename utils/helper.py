@@ -80,8 +80,7 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
     predicted_qvalues = agent(states)
 
      # select q-values for chosen actions
-    predicted_qvalues_for_actions = predicted_qvalues[range(
-            len(actions)), actions]
+    predicted_qvalues_for_actions=predicted_qvalues.gather(1,actions.view(-1,1))
 
 
     # compute q-values for all actions in next states
@@ -94,7 +93,7 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
         next_actions=target_network(next_states).argmax(axis=-1)
 
     # compute V*(next_states) using predicted next q-values
-    next_state_values=predicted_next_qvalues[range(len(next_actions)), next_actions]
+    next_state_values=predicted_next_qvalues.gather(1,next_actions.view(-1,1))
 
     assert next_state_values.dim(
     ) == 1 and next_state_values.shape[0] == states.shape[0], "must predict one value per state"
@@ -103,7 +102,7 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
     # at the last state use the simplified formula: Q(s,a) = r(s,a) since s' doesn't exist
     # you can multiply next state values by is_not_done to achieve this.
     # print(predicted_qvalues.shape,rewards.shape)
-    target_qvalues_for_actions = rewards+is_not_done*(gamma*next_state_values)
+    target_qvalues_for_actions = rewards.view(-1,1)+is_not_done.view(-1,1)*(gamma*next_state_values)
 
     error=torch.abs(predicted_qvalues_for_actions -
                        target_qvalues_for_actions.detach())
@@ -120,4 +119,4 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
         assert target_qvalues_for_actions.data.dim(
         ) == 1, "there's something wrong with target q-values, they must be a vector"
 
-    return loss,error.detach().cpu().numpy()
+    return loss,error.detach().view(-1).cpu().numpy()
