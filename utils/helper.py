@@ -95,8 +95,8 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
     # compute V*(next_states) using predicted next q-values
     next_state_values=predicted_next_qvalues.gather(1,next_actions.view(-1,1))
 
-    assert next_state_values.dim(
-    ) == 1 and next_state_values.shape[0] == states.shape[0], "must predict one value per state"
+    # assert next_state_values.dim(
+    # ) == 1 and next_state_values.shape[0] == states.shape[0], "must predict one value per state"
 
     # compute "target q-values" for loss - it's what's inside square parentheses in the above formula.
     # at the last state use the simplified formula: Q(s,a) = r(s,a) since s' doesn't exist
