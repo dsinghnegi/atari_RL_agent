@@ -34,11 +34,13 @@ class PreprocessAtariObs(ObservationWrapper):
         #  * cast image to grayscale
         #  * convert image pixels to (0,1) range, float32 type
         
-        img=img[30:-15,:]
-        img=cv2.resize(img,self.img_size[1:])
-        
-        img=img.astype('float32')/255.0
-        img=self._to_gray_scale(img)
+        img=img[32:-15,7:-7]
+        img=cv2.resize(img,(64,64))
+
+        img=cv2.split(img)[0]
+        img=cv2.equalizeHist(img)
+        img=img.astype('float32')/128.0 -1.0
+
         # print(img.shape)
 
         return img.reshape(self.img_size)
