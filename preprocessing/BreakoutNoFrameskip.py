@@ -25,24 +25,12 @@ class PreprocessAtariObs(ObservationWrapper):
 
     def observation(self, img):
         """what happens to each observation"""
-
-        # Here's what you need to do:
-        #  * crop image, remove irrelevant parts
-        #  * resize image to self.img_size
-        #     (use imresize from any library you want,
-        #      e.g. opencv, skimage, PIL, keras)
-        #  * cast image to grayscale
-        #  * convert image pixels to (0,1) range, float32 type
         
         img=img[32:-15,7:-7]
         img=cv2.resize(img,(64,64))
 
         img=cv2.split(img)[0]
         img=cv2.equalizeHist(img)
-        img=img.astype('float32')/128.0 -1.0
-
-        # print(img.shape)
-
         return img.reshape(self.img_size)
 
 

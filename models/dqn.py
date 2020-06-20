@@ -67,19 +67,18 @@ class DQNAgent(nn.Module):
         takes agent's observation (tensor), returns qvalues (tensor)
         :param state_t: a batch of 4-frame buffers, shape = [batch_size, 4, h, w]
         """
-        # Use your network to compute qvalues for given state
-        # print(state_t.size())
-        qvalues = self.network(state_t)
+        model_device = next(self.parameters()).device
+        state_t = torch.tensor(state_t, device=model_device, dtype=torch.float)/128.0 -1.0   
 
+        qvalues = self.network(state_t)
         return qvalues
 
     def get_qvalues(self, states):
         """
         like forward, but works on numpy arrays, not tensors
         """
-        model_device = next(self.parameters()).device
-        states = torch.tensor(states, device=model_device, dtype=torch.float)
-        qvalues = self.forward(states)
+        with torch.no_grad():
+            qvalues = self.forward(states)
         return qvalues.data.cpu().numpy()
 
     def sample_actions(self, qvalues):

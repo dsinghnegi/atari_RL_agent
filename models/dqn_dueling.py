@@ -67,6 +67,9 @@ class DQNAgent(nn.Module):
         # self.network.apply(weights_init)
 
     def forward(self, state_t):
+        model_device = next(self.parameters()).device
+        state_t = torch.tensor(state_t, device=model_device, dtype=torch.float)/128.0 -1.0 
+        
         value_and_advantage = self.network(state_t)
         value,advantage= torch.split(value_and_advantage,self.hidden//2,1)
         value=self.value_network(value)
@@ -76,8 +79,6 @@ class DQNAgent(nn.Module):
 
     def get_qvalues(self, states):
         with torch.no_grad():
-            model_device = next(self.parameters()).device
-            states = torch.tensor(states, device=model_device, dtype=torch.float)
             qvalues = self(states)
         return qvalues.data.cpu().numpy()
 

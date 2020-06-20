@@ -44,7 +44,6 @@ class ReplayBuffer(object):
             self._probabilities[0]=1.0
             for k in data.keys():
               self._storage[k]=np.zeros(( self._maxsize,*data[k].shape[1:]),dtype=data[k].dtype)
-          
 
         self._probabilities[self._next_idx]=self._max_priority()
         for k in data.keys():

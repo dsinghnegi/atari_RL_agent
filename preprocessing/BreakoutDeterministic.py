@@ -26,8 +26,6 @@ class PreprocessAtariObs(ObservationWrapper):
 
         img=cv2.split(img)[0]
         img=cv2.equalizeHist(img)
-        img=img.astype('float32')/128.0 -1.0
-
 
         return img.reshape(-1,64,64)
 

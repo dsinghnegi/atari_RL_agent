@@ -18,7 +18,7 @@ class FrameBuffer(Wrapper):
             raise ValueError(
                 'dim_order should be "tensorflow" or "pytorch", got {}'.format(dim_order))
         self.observation_space = Box(0.0, 1.0, obs_shape)
-        self.framebuffer = np.zeros(obs_shape, 'float32')
+        self.framebuffer = np.zeros(obs_shape, 'uint8')
 
     def reset(self):
         """resets breakout, returns initial frames"""
