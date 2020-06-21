@@ -16,7 +16,7 @@ from utils.replay_buffer import ReplayBuffer
 from utils import utils
 from utils.helper import play_and_record, compute_td_loss, evaluate
 import environment 
-
+import tpu
 
 
 def get_args():
@@ -28,6 +28,7 @@ def get_args():
 	ap.add_argument("--double_dqn",action='store_true',help="enable double_dqn")
 	ap.add_argument("--dueling",action='store_true',help="enable dueling dqn")
 	ap.add_argument( "--priority_replay",action='store_true',help="enable priority replay")
+	ap.add_argument("--tpu",action='store_true',help="enable TPU")
 	ap.add_argument( "--num_thread",type=int, default=1 ,help="number of thread for replay")
 	
 	opt = ap.parse_args()
@@ -91,7 +92,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 
 
 
-	score=evaluate(make_env(clip_rewards=True, seed=444), agent, n_games=3 * n_lives, greedy=True)
+	score=evaluate(make_env(clip_rewards=True, seed=444), agent, n_games= n_lives, greedy=True)
 	print("Score without training: {}".format(score))
 
 	
@@ -117,7 +118,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 				except KeyboardInterrupt:
 					pass
 
-			agent.epsilon = utils.linear_decay(init_epsilon, final_epsilon, step, total_steps)
+			agent.epsilon = utils.linear_decay(init_epsilon, final_epsilon, step, total_steps/3)
 
 			# play
 			# _, state = play_and_record(state, agent, env, exp_replay, timesteps_per_epoch)
@@ -168,7 +169,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 				torch.save(agent.state_dict(), os.path.join(checkpoint_path,"agent_{}.pth".format(step)))
 
 			if step % eval_freq == 0:
-				mean_rw=evaluate(make_env(clip_rewards=True, seed=step), agent, n_games=3 * n_lives, greedy=True)
+				mean_rw=evaluate(make_env(clip_rewards=True, seed=step), agent, n_games= n_lives, greedy=True)
 				
 				initial_state_q_values = agent.get_qvalues(
 					[make_env(seed=step).reset()]
@@ -197,7 +198,11 @@ def main():
 	if not os.path.exists(checkpoint_path):
 		os.mkdir(checkpoint_path)
 
-	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+	if opt.tpu:
+		device =tpu.get_TPU()
+	else:
+		device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 	ENV=environment.ENV_DICT[opt.environment]
 
