@@ -22,6 +22,7 @@ var/
 wheels/
 tmp/
 logs/*
+train_dir/
 pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
