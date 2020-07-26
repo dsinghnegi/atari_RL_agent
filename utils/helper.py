@@ -8,6 +8,7 @@ def evaluate(env, agent, n_games=1, greedy=False, t_max=10000):
 
     for _ in range(n_games):
         s = env.reset()
+
         for _ in range(t_max):
             qvalues = agent.get_qvalues([s])
             action = qvalues.argmax(axis=-1)[0] if greedy else agent.sample_actions(qvalues)[0]
@@ -41,9 +42,8 @@ def play_and_record(initial_state, agent, env, exp_replay, n_steps=1):
     for _ in range(n_steps):
       qvalues = agent.get_qvalues([s])
       action=agent.sample_actions(qvalues)[0]
-      
       s_n, r, done, _ = env.step(action)
-      r= -1.0 if done else r
+      
       exp_replay.add(s, action, r, s_n, done)
       sum_rewards+=r
       s=s_n
@@ -95,21 +95,16 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
     # compute V*(next_states) using predicted next q-values
     next_state_values=predicted_next_qvalues.gather(1,next_actions.view(-1,1))
 
-    # assert next_state_values.dim(
-    # ) == 1 and next_state_values.shape[0] == states.shape[0], "must predict one value per state"
-
-    # compute "target q-values" for loss - it's what's inside square parentheses in the above formula.
-    # at the last state use the simplified formula: Q(s,a) = r(s,a) since s' doesn't exist
-    # you can multiply next state values by is_not_done to achieve this.
-    # print(predicted_qvalues.shape,rewards.shape)
+    
     target_qvalues_for_actions = rewards.view(-1,1)+is_not_done.view(-1,1)*(gamma*next_state_values)
 
     error=torch.abs(predicted_qvalues_for_actions -
                        target_qvalues_for_actions.detach())
     
-    loss =torch.mean(torch.from_numpy(is_weight).to(device).detach()
-                * torch.pow(predicted_qvalues_for_actions - target_qvalues_for_actions.detach(),2))
+    # loss =torch.mean(torch.from_numpy(is_weight).to(device).detach()
+    #             * torch.pow(predicted_qvalues_for_actions - target_qvalues_for_actions.detach(),2))
 
+    loss=F.smooth_l1_loss(predicted_qvalues_for_actions,target_qvalues_for_actions.detach(),reduction='mean')
 
     if check_shapes:
         assert predicted_next_qvalues.data.dim(
