@@ -84,21 +84,22 @@ def linear_decay(init_val, final_val, cur_step, total_steps):
 
 
 
-def step_decay(init_val, final_val, cur_step, total_steps):
-    if cur_step < 10000:
-        return init_val
+def step_decay(init_val, final_val, cur_step, total_steps,
+        replay_memory_start_size=10**5, eps_annealing_frames=500000,
+        max_frames=2500000):
+    slope = -(init_val - final_val)/eps_annealing_frames
+    intercept =init_val - slope*replay_memory_start_size
+    slope_2 = -(final_val - total_steps)/(max_frames - eps_annealing_frames - replay_memory_start_size)
+    intercept_2 = total_steps - slope_2*max_frames
+        
 
-    if cur_step <5*10**5:
-        total_steps=min(total_steps,5*10**5)
-        cur_step-=10000
-        total_steps-=10000
-        return (init_val * (total_steps - cur_step) +
-            0.1 * cur_step) / (total_steps)
-    
-    cur_step-=5*10**5
-    total_steps-=5*10**5
-    return (init_val * (total_steps- cur_step) +
-            final_val* cur_step) / (total_steps-1000000)
+    if cur_step < replay_memory_start_size:
+        eps = init_val
+    elif cur_step >= replay_memory_start_size and cur_step < replay_memory_start_size + eps_annealing_frames:
+        eps = slope*cur_step + self.intercept
+    elif cur_step >= replay_memory_start_size + eps_annealing_frames:
+        eps = slope_2*cur_step + self.intercept_2
+    return eps
 
 def smoothen(values):
     kernel = gaussian(100, std=100)
