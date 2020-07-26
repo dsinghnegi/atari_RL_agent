@@ -1,5 +1,3 @@
-## This repository is under development
-
 # Atari RL agent
 Reinforcement learining based agent for playing atari games.
 
@@ -16,6 +14,7 @@ Reinforcement learining based agent for playing atari games.
 Agent has learned a nice trick to defeate the opponnent.
 
 ![Pong](images/pong.gif)
+![BreakoutDeterministic](images/breakout.gif)
 
 
 ## Supported Environment
@@ -29,7 +28,7 @@ Agent has learned a nice trick to defeate the opponnent.
 - [x] Prioritized replay
 - [x] Dueling network
 - [X] Train model for Pong
-- [ ] Achive 300+ score on breakout
+- [x] Achive 400+ score on breakout
 
 ## References
 - https://github.com/yandexdataschool/Practical_RL
