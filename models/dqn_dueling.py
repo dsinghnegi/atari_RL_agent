@@ -2,8 +2,6 @@ import torch
 import torch.nn as nn
 import  numpy as np
 
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 
 def weights_init(m):
     classname = m.__class__.__name__
@@ -16,7 +14,7 @@ def weights_init(m):
 
 
 class DQNAgent(nn.Module):
-    def __init__(self, state_shape, n_actions, epsilon=0,hidden=512):
+    def __init__(self, state_shape, n_actions, epsilon=0,hidden=1024):
 
         super().__init__()
         self.epsilon = epsilon
@@ -27,31 +25,44 @@ class DQNAgent(nn.Module):
         # Define your network body here. Please make sure agent is fully contained here
         # nn.Flatten() can be useful
         self.network=nn.Sequential(
-            nn.Conv2d(4,32,3,2),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(4,32,8,4,bias=False),
             nn.ReLU(),
+            # nn.BatchNorm2d(32),
 
-            nn.Conv2d(32,64,3,2),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(32,64,4,2,bias=False),
             nn.ReLU(),
+            # nn.BatchNorm2d(64),
 
-            nn.Conv2d(64,128,3,2),
-            nn.BatchNorm2d(128),
+            nn.Conv2d(64,64,3,1,bias=False),
             nn.ReLU(),
+            # nn.BatchNorm2d(128),
             
-            nn.Flatten(),
-            nn.Linear(6272,self.hidden),
+            # nn.Conv2d(128,256,3,2),
+            # nn.ReLU(),
             # nn.BatchNorm2d(256),
+
+            nn.Conv2d(64,self.hidden,4,1),
             nn.ReLU(),
+
+            nn.AvgPool2d((4,4))          
+            # nn.BatchNorm2d(self.hidden),
+
+
+            # nn.Flatten(),
+            # nn.Linear(6272,self.hidden),
+            # nn.BatchNorm2d(256),
+            # nn.ReLU(),
         )
 
         self.value_network=nn.Sequential(
             nn.Flatten(),
+            # nn.Linear(self.hidden//2,self.hidden//2),
             nn.Linear(self.hidden//2,1),
         )
 
         self.advantage_network=nn.Sequential(
             nn.Flatten(),
+            # nn.Linear(self.hidden//2,self.hidden//2),
             nn.Linear(self.hidden//2,n_actions),
         )
 
@@ -61,20 +72,18 @@ class DQNAgent(nn.Module):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
             if isinstance(m, nn.Linear):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-            elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-        # self.network.apply(weights_init)
-
+           
     def forward(self, state_t):
         model_device = next(self.parameters()).device
-        state_t = torch.tensor(state_t, device=model_device, dtype=torch.float)/128.0 -1.0 
-        
+        state_t = torch.tensor(state_t, device=model_device, dtype=torch.float)/255
+
         value_and_advantage = self.network(state_t)
+        
         value,advantage= torch.split(value_and_advantage,self.hidden//2,1)
         value=self.value_network(value)
         advantage=self.advantage_network(advantage) 
         qvalues = value + (advantage- torch.mean(advantage, axis=1, keepdims=True))
+        
         return qvalues
 
     def get_qvalues(self, states):
