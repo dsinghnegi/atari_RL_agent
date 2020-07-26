@@ -7,7 +7,6 @@ import gym
 
 from models import DQNAgent
 from utils.helper import evaluate
-
 import environment 
 
 
@@ -17,12 +16,10 @@ def get_args():
 	ap.add_argument("-c", "--checkpoint",required=True ,help="checkpoint for agent")
 	ap.add_argument("--dueling",action='store_true',help="enable dueling dqn")
 	ap.add_argument("-v", "--video", default="videos" ,help="videos_dir")
-	ap.add_argument("-n", "--n_lives", default=5 ,help="number of n_lives")
 
 		
 	opt = ap.parse_args()
 	return opt
-
 
 
 def main():
@@ -37,21 +34,18 @@ def main():
 
 	ENV=environment.ENV_DICT[opt.environment]
 
-	env = ENV.make_env()
-
+	env = ENV.make_env(clip_rewards=False)
 
 	state_shape = env.observation_space.shape
 	n_actions = env.action_space.n
-
+	
 	agent = DQNAgent(dueling=opt.dueling,state_shape=state_shape, n_actions=n_actions).to(device)
 	agent.load_state_dict(torch.load(opt.checkpoint))
 
-	env_monitor = gym.wrappers.Monitor(ENV.make_env(), directory=opt.video, force=True)
-	sessions = [evaluate(env_monitor, agent, n_games=opt.n_lives, greedy=True) for _ in range(2)]
-	print(sessions)
+	env_monitor = gym.wrappers.Monitor(ENV.make_env(clip_rewards=False), directory=opt.video, force=True)
+	reward=evaluate(env_monitor, agent, greedy=True) 
+	print("Reward: {}".format(reward))
 	env_monitor.close()
-
-
 
 
 if __name__ == '__main__':

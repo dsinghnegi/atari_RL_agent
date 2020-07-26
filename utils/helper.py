@@ -1,14 +1,14 @@
 import torch
 import numpy as np
 
-def evaluate(env, agent, n_games=1, greedy=False, t_max=10000):
+def evaluate(env, agent, greedy=False, t_max=10000):
     """ Plays n_games full games. If greedy, picks actions as argmax(qvalues). Returns mean reward. """
     rewards = []
     reward = 0
 
-    for _ in range(n_games):
+    n_lives=env.unwrapped.ale.lives()
+    for _ in range(n_lives):
         s = env.reset()
-
         for _ in range(t_max):
             qvalues = agent.get_qvalues([s])
             action = qvalues.argmax(axis=-1)[0] if greedy else agent.sample_actions(qvalues)[0]
