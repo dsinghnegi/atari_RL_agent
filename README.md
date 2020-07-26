@@ -28,7 +28,7 @@ Agent has learned a nice trick to defeate the opponnent.
 - [x] Prioritized replay
 - [x] Dueling network
 - [X] Train model for Pong
-- [x] Achive 400+ score on breakout
+- [x] Achive 300+ score on breakout
 
 ## References
 - https://github.com/yandexdataschool/Practical_RL
