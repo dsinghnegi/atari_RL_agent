@@ -1,4 +1,5 @@
 import torch
+from torch.nn import functional as F
 import numpy as np
 
 def evaluate(env, agent, greedy=False, t_max=10000):
