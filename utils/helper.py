@@ -7,7 +7,8 @@ def evaluate(env, agent, greedy=False, t_max=10000):
     rewards = []
     reward = 0
 
-    n_lives=env.unwrapped.ale.lives()
+    n_lives=max(env.unwrapped.ale.lives(),1)
+    
     for _ in range(n_lives):
         s = env.reset()
         for _ in range(t_max):
