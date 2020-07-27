@@ -20,22 +20,11 @@ class PreprocessAtariObs(ObservationWrapper):
     def observation(self, img):
         """what happens to each observation"""
 
-        # Here's what you need to do:
-        #  * crop image, remove irrelevant parts
-        #  * resize image to self.img_size
-        #     (use imresize from any library you want,
-        #      e.g. opencv, skimage, PIL, keras)
-        #  * cast image to grayscale
-        #  * convert image pixels to (0,1) range, float32 type
-        
-        img=img[30:-15,:]
-        img=cv2.resize(img,self.img_size[1:])
-        
-        img=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-        img=img.astype('float32')/255.0
-        # print(img.shape)
+        img=cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
+        img=img[34:34+160,0:160]
+        img=cv2.resize(img,(84,84),cv2.INTER_NEAREST)
 
-        return img.reshape(self.img_size)
+        return img.reshape(-1,84,84)
 
 
 def PrimaryAtariWrap(env, clip_rewards=True):
@@ -70,5 +59,5 @@ def make_env(clip_rewards=True, seed=None):
     if seed is not None:
         env.seed(seed)
     env = PrimaryAtariWrap(env, clip_rewards)
-    env = FrameBuffer(env, n_frames=4, dim_order='pytorch')
+    env = FrameBuffer(env, n_frames=4)
     return env
