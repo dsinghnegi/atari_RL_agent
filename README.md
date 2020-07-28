@@ -1,5 +1,5 @@
 # Atari RL agent
-Reinforcement learining based agent for playing atari games.
+Reinforcement learining based agents to playing atari games.
 
 ## Agents
 - DQN
@@ -7,7 +7,15 @@ Reinforcement learining based agent for playing atari games.
 - Prioritized Replay
 - Dueiling network
 
-
+## Test pretrained Agent
+- PongDeterministic-v4 
+  ```
+  python evaluate.py -c ckpt/PongDeterministic_deuling_972500.pth --dueling -e PongDeterministic-v4
+  ```
+- BreakoutDeterministic-v4
+  ```
+  python evaluate.py -c ckpt/BreakoutDeterministic_deuling_3560000.pth --dueling -e BreakoutDeterministic-v4
+  ```
 
 ## Game Play
 
