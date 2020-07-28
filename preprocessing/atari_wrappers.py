@@ -44,6 +44,12 @@ class ClipRewardEnv(gym.RewardWrapper):
         """Bin reward to {+1, 0, -1} by its sign."""
         return np.sign(reward)
 
+class ScaleRewardEnv(gym.RewardWrapper):
+    def __init__(self, env,scale):
+        gym.RewardWrapper.__init__(self, env)
+
+    def reward(self, reward):
+        return reward/scale
 
 class FireResetEnv(gym.Wrapper):
     def __init__(self, env):
