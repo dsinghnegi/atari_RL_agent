@@ -10,16 +10,14 @@ Reinforcement learining based agent for playing atari games.
 
 
 ## Game Play
-### Pong
-Agent has learned a nice trick to defeate the opponnent.
 
 ![Pong](images/pong.gif)
 ![BreakoutDeterministic](images/breakout.gif)
 
 
 ## Supported Environment
-- [x] BreakoutNoFrameskip-v4
-- [x] PongNoFrameskip-v4
+- [x] BreakoutDeterministic-v4
+- [x] PongDeterministic-v4
 
 ## TODO
 - [x] DQN
