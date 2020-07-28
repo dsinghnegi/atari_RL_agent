@@ -21,48 +21,67 @@ import tpu
 
 def get_args():
 	ap = argparse.ArgumentParser()
-	ap.add_argument("-e", "--environment", default="BreakoutNoFrameskip-v4" ,help="envirement to play")
-	ap.add_argument("-l", "--log_dir", default="logs" ,help="logs dir for tensorboard")
-	ap.add_argument("-t", "--train_dir", default="train_dir" ,help="checkpoint directory for tensorboard")
-	ap.add_argument("-c", "--checkpoint",default=None,help="checkpoint for agent")
-	ap.add_argument("--double_dqn",action='store_true',help="enable double_dqn")
-	ap.add_argument("--dueling",action='store_true',help="enable dueling dqn")
-	ap.add_argument( "--priority_replay",action='store_true',help="enable priority replay")
-	ap.add_argument("--tpu",action='store_true',help="enable TPU")
+	ap.add_argument("-e", "--environment", default="BreakoutDeterministic-v4", help="Envirement to play")
+	ap.add_argument("-l", "--log_dir", default="logs", help="Logs dir for tensorboard")
+	ap.add_argument("-t", "--train_dir", default="train_dir", help="Checkpoint directory")
+	ap.add_argument("-c", "--checkpoint", default=None, help="Checkpoint for agent")
+	ap.add_argument("--double_dqn", action='store_true', help="Enable double_dqn")
+	ap.add_argument("--dueling", action='store_true', help="Enable dueling dqn")
+	ap.add_argument( "--priority_replay", action='store_true', help="Enable priority replay")
+	ap.add_argument( "--replay_size", default=int(10e5),type=int,  help="Replay buffer size")
+	ap.add_argument("--tpu", action='store_true', help="Enable TPU")
+	ap.add_argument("--batch_size", default=32, type=int, help="Batch size for training")
+	ap.add_argument("--init_epsilon", default=1.0, type=float, help="Intial value of epsilon")
+	ap.add_argument("--final_epsilon", default=0.01, type=float, help="Final value of epsilon")
+	ap.add_argument("--lr", default=1e-5, type=float, help="Learning Rate")
+	ap.add_argument("--max_grad_norm", default=20.0,type=float, help="Gradient clipping")
+	ap.add_argument("--gamma", default=0.99, type=float, help="Discounting factor")	
+	ap.add_argument("--steps", default=int(10e6), type=int, help="Training steps")
+	ap.add_argument("--loss_freq", default=50, type=int, help="loss frequency")
+	ap.add_argument("--target_freq", default=2500, type=int, help="Target network update frequency")
+	ap.add_argument("--eval_freq", default=2500, type=int, help="Evalualtion frequency")
 	
 	opt = ap.parse_args()
 	return opt
 
 
 
-def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
+def train(make_env, agent, target_network, device, writer, opt):
 	timesteps_per_epoch = 4
-	batch_size = 32
-	total_steps = 10**5
+	batch_size = opt.batch_size
+	total_steps = opt.steps
+	checkpoint_path=opt.train_dir
+	if not os.path.exists(checkpoint_path):
+		os.mkdir(checkpoint_path)
 
-	optim = torch.optim.Adam(agent.parameters(), lr=1e-5)
+	init_epsilon =opt.init_epsilon
+	final_epsilon = opt.final_epsilon
 
-	init_epsilon = 1.0
-	final_epsilon = 0.01
+	loss_freq = opt.loss_freq
+	refresh_target_network_freq = opt.target_freq
+	eval_freq = opt.eval_freq
 
-	loss_freq = 50
-	refresh_target_network_freq = 2500
-	eval_freq = 2500
-
-	max_grad_norm = 20.0
+	max_grad_norm = opt.max_grad_norm
 
 	priority_replay=opt.priority_replay
+	replay_size=opt.replay_size
+	gamma=opt.gamma	
 
+	optim = torch.optim.Adam(agent.parameters(), lr=opt.lr)
+
+	env = make_env(clip_rewards=True)
 	step = 0
-
 	state = env.reset()
 	if opt.checkpoint:
 		agent.load_state_dict(torch.load(opt.checkpoint))
 		target_network.load_state_dict(torch.load(opt.checkpoint))
 		step=int(re.findall(r'\d+', opt.checkpoint)[-1])
 
+	
+	agent.epsilon = utils.linear_decay(init_epsilon, final_epsilon, step, total_steps)
 
-	exp_replay = ReplayBuffer(10**5,priority_replay)
+	play_steps=int(10e2)
+	exp_replay = ReplayBuffer(replay_size,priority_replay)
 	for i in tqdm(range(100)):
 		if not utils.is_enough_ram(min_available_gb=0.1):
 			print("""
@@ -72,9 +91,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 				"""
 				 )
 			break
-		play_and_record(state, agent, env, exp_replay, n_steps=10**3)
-		if len(exp_replay) == 10**5:
-			break
+		play_and_record(state, agent, env, exp_replay, n_steps=play_steps)
 
 
 	print("Experience Reply buffer : {}".format(len(exp_replay)))
@@ -88,16 +105,10 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 
 
 
-
-	score=evaluate(make_env(clip_rewards=False, seed=444), agent, greedy=True)
+	score=evaluate(make_env(clip_rewards=False), agent, greedy=True)
 	print("Score without training: {}".format(score))
 
-	
-	loss=10**6
 
-	state_agent_dict={}
-
-	env = make_env()
 	env.reset()
 	
 	for step in trange(step,total_steps + 1):
@@ -121,7 +132,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 
 		loss,error = compute_td_loss(states_bn, actions_bn, rewards_bn, next_states_bn, is_done_bn,
 				agent, target_network,is_weight,
-				gamma=0.99,
+				gamma=gamma,
 				check_shapes=False,
 				device=device,
 				double_dqn=double_dqn)
@@ -129,7 +140,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 		loss.backward()
 		grad_norm = nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
 		optim.step()
-		# exp_replay.update_priority(error)
+		exp_replay.update_priority(error)
   
 	   
 		if step % loss_freq == 0:
@@ -146,7 +157,7 @@ def train(env,make_env,agent,target_network,device,writer,checkpoint_path,opt):
 			torch.save(agent.state_dict(), os.path.join(checkpoint_path,"agent_{}.pth".format(step)))
 
 		if step % eval_freq == 0:
-			mean_rw=evaluate(make_env(clip_rewards=False, seed=step), agent, greedy=True)
+			mean_rw=evaluate(make_env(clip_rewards=False), agent, greedy=True)
 			
 			initial_state_q_values = agent.get_qvalues(
 				[make_env(seed=step).reset()]
@@ -171,11 +182,7 @@ def main():
 
 
 	writer = SummaryWriter(opt.log_dir)
-	checkpoint_path=opt.train_dir
-	if not os.path.exists(checkpoint_path):
-		os.mkdir(checkpoint_path)
-
-
+	
 	if opt.tpu:
 		device =tpu.get_TPU()
 	else:
@@ -188,13 +195,13 @@ def main():
 	n_actions = env.action_space.n
 		
 
-	agent = DQNAgent(dueling=opt.dueling,state_shape=state_shape, n_actions=n_actions, epsilon=1.0).to(device)
+	agent = DQNAgent(dueling=opt.dueling,state_shape=state_shape, n_actions=n_actions).to(device)
 	target_network = DQNAgent(dueling=opt.dueling,state_shape=state_shape, n_actions=n_actions).to(device)
 
 	writer.add_graph(agent,torch.tensor([env.reset()]).to(device))
 	writer.close()
 
-	train(env,ENV.make_env,agent,target_network,device,writer,checkpoint_path,opt)
+	train(ENV.make_env, agent, target_network, device, writer, opt)
 	
 
 
