@@ -1,13 +1,22 @@
 # Atari RL agent
-Reinforcement learining based agent for playing atari games.
+Reinforcement learining based agents to playing atari games.
 
 ## Agents
-- DQN
-- Double DQN
-- Prioritized Replay
-- Dueiling network
+- Deep Q-network(DQN)
+  - Double DQN
+  - Prioritized Replay
+  - Dueiling network
+- Asynchronous Advantage Actor-Critic(A3C)
 
-
+## Test pretrained Agent
+- PongDeterministic-v4 
+  ```
+  python evaluate.py -c ckpt/PongDeterministic_deuling_972500.pth --dueling -e PongDeterministic-v4
+  ```
+- BreakoutDeterministic-v4
+  ```
+  python evaluate.py -c ckpt/BreakoutDeterministic_deuling_3560000.pth --dueling -e BreakoutDeterministic-v4
+  ```
 
 ## Game Play
 
@@ -18,6 +27,7 @@ Reinforcement learining based agent for playing atari games.
 ## Supported Environment
 - [x] BreakoutDeterministic-v4
 - [x] PongDeterministic-v4
+- [ ] KungFuMasterDeterministic-v4
 
 ## TODO
 - [x] DQN
@@ -27,6 +37,7 @@ Reinforcement learining based agent for playing atari games.
 - [x] Dueling network
 - [X] Train model for Pong
 - [x] Achive 300+ score on breakout
+- [ ] A3C Agent for  KungFuMasterDeterministic-v4
 
 ## References
 - https://github.com/yandexdataschool/Practical_RL
