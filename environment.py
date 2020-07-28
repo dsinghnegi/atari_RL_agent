@@ -1,9 +1,7 @@
-from preprocessing import BreakoutNoFrameskip as BNF
-from preprocessing import PongNoFrameskip as PNF
+from preprocessing import PongDeterministic as PD
 from preprocessing import BreakoutDeterministic as BD
 
 ENV_DICT={
-'BreakoutNoFrameskip-v4':BNF,
-'PongNoFrameskip-v4':PNF,
+'PongDeterministic-v4':PD,
 'BreakoutDeterministic-v4':BD,
 }

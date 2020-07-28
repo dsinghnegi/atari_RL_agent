@@ -6,7 +6,7 @@ import cv2
 from preprocessing.framebuffer import FrameBuffer
 from preprocessing import atari_wrappers
 
-ENV_NAME = "PongNoFrameskip-v4"
+ENV_NAME = "PongDeterministic-v4"
 
 
 class PreprocessAtariObs(ObservationWrapper):
@@ -28,12 +28,12 @@ class PreprocessAtariObs(ObservationWrapper):
 
 
 def PrimaryAtariWrap(env, clip_rewards=True):
-    assert 'NoFrameskip' in env.spec.id
+    # assert 'NoFrameskip' in env.spec.id
 
     # This wrapper holds the same action for <skip> frames and outputs
     # the maximal pixel value of 2 last frames (to handle blinking
     # in some envs)
-    env = atari_wrappers.MaxAndSkipEnv(env, skip=4)
+    env = atari_wrappers.MaxAndSkipEnv(env, skip=1)
 
     # This wrapper sends done=True when each life is lost
     # (not all the 5 lives that are givern by the game rules).
