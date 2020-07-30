@@ -43,7 +43,7 @@ def PrimaryAtariWrap(env, clip_rewards=True, scale=100):
     # This wrapper laucnhes the ball when an episode starts.
     # Without it the agent has to learn this action, too.
     # Actually it can but learning would take longer.
-    env = atari_wrappers.FireResetEnv(env)
+    # env = atari_wrappers.FireResetEnv(env)
 
     # This wrapper transforms rewards to {-1, 0, 1} according to their sign
     if clip_rewards:

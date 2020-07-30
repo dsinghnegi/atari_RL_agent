@@ -47,9 +47,10 @@ class ClipRewardEnv(gym.RewardWrapper):
 class ScaleRewardEnv(gym.RewardWrapper):
     def __init__(self, env,scale):
         gym.RewardWrapper.__init__(self, env)
+        self.scale=scale
 
     def reward(self, reward):
-        return reward/scale
+        return reward/self.scale
 
 class FireResetEnv(gym.Wrapper):
     def __init__(self, env):
