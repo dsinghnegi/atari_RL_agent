@@ -96,6 +96,7 @@ optional arguments:
 - [X] Train model for Pong
 - [x] Achive 300+ score on breakout
 - [ ] A3C Agent for  KungFuMasterDeterministic-v4
+- [ ] Parallel processing for A3C
 
 ## References
 - https://github.com/yandexdataschool/Practical_RL
