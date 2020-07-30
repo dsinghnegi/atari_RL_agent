@@ -25,7 +25,7 @@ class A3C(nn.Module):
 
 
 			nn.Flatten(),
-			nn.Linear(6272,self.hidden),
+			nn.Linear(2592,self.hidden),
 
 		)
 
@@ -52,8 +52,36 @@ class A3C(nn.Module):
 		return logits, state_values
 
 
-	def sample_actions(self, logits, state_values):
+	def sample_actions(self, agent_outputs):
 		"""pick actions given numeric agent outputs (np arrays)"""
 		logits, state_values = agent_outputs
+		logits=logits.detach().cpu().numpy()
+		state_values=state_values.detach().cpu().numpy()
 		policy = np.exp(logits) / np.sum(np.exp(logits), axis=-1, keepdims=True)
 		return np.array([np.random.choice(len(p), p=p) for p in policy])
+
+
+
+class EnvBatch:
+	def __init__(self, make_env, n_envs = 10):
+		""" Creates n_envs environments and babysits them for ya' """
+		self.envs = [make_env() for _ in range(n_envs)]
+		
+	def reset(self):
+		""" Reset all games and return [n_envs, *obs_shape] observations """
+		return np.array([env.reset() for env in self.envs])
+	
+	def step(self, actions):
+		"""
+		Send a vector[batch_size] of actions into respective environments
+		:returns: observations[n_envs, *obs_shape], rewards[n_envs], done[n_envs,], info[n_envs]
+		"""
+		results = [env.step(a) for env, a in zip(self.envs, actions)]
+		new_obs, rewards, done, infos = map(np.array, zip(*results))
+		
+		# reset environments automatically
+		for i in range(len(self.envs)):
+			if done[i]:
+				new_obs[i] = self.envs[i].reset()
+		
+		return new_obs, rewards, done, infos
