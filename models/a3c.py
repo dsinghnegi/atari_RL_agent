@@ -25,7 +25,7 @@ class A3C(nn.Module):
 
 
 			nn.Flatten(),
-			nn.Linear(2592,self.hidden),
+			nn.Linear(512,self.hidden),
 
 		)
 
@@ -58,6 +58,7 @@ class A3C(nn.Module):
 		logits=logits.detach().cpu().numpy()
 		state_values=state_values.detach().cpu().numpy()
 		policy = np.exp(logits) / np.sum(np.exp(logits), axis=-1, keepdims=True)
+
 		return np.array([np.random.choice(len(p), p=p) for p in policy])
 
 
