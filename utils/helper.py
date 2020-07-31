@@ -24,7 +24,25 @@ def evaluate(env, agent, greedy=False, t_max=10000):
 	return np.mean(rewards)
 
 
+def evaluate_A3C(env, agent, n_games=1):
+	"""Plays an a game from start till done, returns per-game rewards """
 
+	game_rewards = []
+	for _ in range(n_games):
+		state = env.reset()
+
+		total_reward = 0
+		while True:
+			action = agent.sample_actions(agent([state]))[0]
+			state, reward, done, info = env.step(action)
+			total_reward += reward
+			# if reward !=0:
+			# 	print(reward)
+			if done:
+				break
+
+		game_rewards.append(total_reward)
+	return np.mean(game_rewards)
 
 def play_and_record(initial_state, agent, env, exp_replay, n_steps=1):
 	"""
