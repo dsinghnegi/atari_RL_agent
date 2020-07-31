@@ -50,7 +50,7 @@ class ScaleRewardEnv(gym.RewardWrapper):
         self.scale=scale
 
     def reward(self, reward):
-        return reward/self.scale
+        return reward*0.01
 
 class FireResetEnv(gym.Wrapper):
     def __init__(self, env):

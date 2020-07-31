@@ -16,7 +16,7 @@ class PreprocessAtariObs(ObservationWrapper):
         """A gym wrapper that crops, scales image into the desired shapes and grayscales it."""
         ObservationWrapper.__init__(self, env)
 
-        self.img_size = (1, 84, 84)
+        self.img_size = (1, 42, 42)
         self.observation_space = Box(0.0, 1.0, self.img_size)
 
     def observation(self, img):
@@ -24,9 +24,9 @@ class PreprocessAtariObs(ObservationWrapper):
 
         img=cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
         img=img[60:-30,5:]
-        img=cv2.resize(img,(84,84),cv2.INTER_NEAREST)
+        img=cv2.resize(img,(42,42),cv2.INTER_NEAREST)
 
-        return img.reshape(-1,84,84)
+        return img.reshape(-1,42,42)
 
 
 def PrimaryAtariWrap(env, clip_rewards=True, scale=100):
@@ -46,8 +46,8 @@ def PrimaryAtariWrap(env, clip_rewards=True, scale=100):
     # env = atari_wrappers.FireResetEnv(env)
 
     # This wrapper transforms rewards to {-1, 0, 1} according to their sign
-    if clip_rewards:
-        env = atari_wrappers.ScaleRewardEnv(env, scale=100)
+    # if clip_rewards:
+    #     env = atari_wrappers.ScaleRewardEnv(env, scale=100)
 
     env = PreprocessAtariObs(env)
     return env
