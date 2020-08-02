@@ -34,8 +34,9 @@ Example:
 
 ## Game Play
 
-![Pong](images/pong.gif)
-![BreakoutDeterministic](images/breakout.gif)
+![Pong](images/pong_low.gif)
+![BreakoutDeterministic](images/breakout_low.gif)
+![KungFuMaster](images/KungFuMaster_low.gif)
 
 ## Train Agent
 ``` 
@@ -95,7 +96,7 @@ optional arguments:
 - [x] Dueling network
 - [X] Train model for Pong
 - [x] Achive 300+ score on breakout
-- [ ] A3C Agent for  KungFuMasterDeterministic-v4
+- [x] A3C Agent for KungFuMasterDeterministic-v4
 - [ ] Parallel processing for A3C
 
 ## References
