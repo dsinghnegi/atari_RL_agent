@@ -86,7 +86,7 @@ optional arguments:
 ## Supported Environment
 - [x] BreakoutDeterministic-v4
 - [x] PongDeterministic-v4
-- [ ] KungFuMasterDeterministic-v4
+- [x] KungFuMasterDeterministic-v4
 
 ## TODO
 - [x] DQN
