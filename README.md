@@ -86,7 +86,7 @@ optional arguments:
 ## Supported Environment
 - [x] BreakoutDeterministic-v4
 - [x] PongDeterministic-v4
-- [ ] KungFuMasterDeterministic-v4
+- [x] KungFuMasterDeterministic-v4
 
 ## TODO
 - [x] DQN
@@ -98,6 +98,11 @@ optional arguments:
 - [x] Achive 300+ score on breakout
 - [x] A3C Agent for KungFuMasterDeterministic-v4
 - [ ] Parallel processing for A3C
+- [ ] LSTM layer for A3C to replace frame stacking
+
+
+## License
+The Apache-2.0 License. Please see the [license file](LICENSE) for more information.
 
 ## References
 - https://github.com/yandexdataschool/Practical_RL
