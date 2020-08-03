@@ -69,7 +69,7 @@ def train(make_env, EnvBatch, agent, device, writer, opt):
 
 	env_batch = EnvBatch(make_env=make_env,n_envs=64)
 	batch_states = env_batch.reset()
-
+	grad_norm=0
 	for step in trange(step,total_steps + 1):
 		optim.zero_grad()
 
@@ -81,17 +81,16 @@ def train(make_env, EnvBatch, agent, device, writer, opt):
 		loss, entropy = compute_A3C_loss(batch_states, batch_actions, batch_rewards, 
 											batch_next_states, batch_done, agent,
 											gamma=gamma,	device=device)
-
-		loss.backward()
-		grad_norm = nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
-		optim.step()
+		if loss >0:
+			loss.backward()
+			grad_norm = nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
+			optim.step()
 
 		batch_states = batch_next_states
 
 		if step % loss_freq == 0:
 			td_loss=loss.data.cpu().item()
-			grad_norm=grad_norm
-
+			
 			assert not np.isnan(td_loss)
 			writer.add_scalar("Training/loss history",td_loss,step)
 			writer.add_scalar("Training/Grad norm history",grad_norm,step)
