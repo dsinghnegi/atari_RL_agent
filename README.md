@@ -33,10 +33,13 @@ Example:
   ```
 
 ## Game Play
-
+### DQN
 ![Pong](images/pong_low.gif)
 ![BreakoutDeterministic](images/breakout_low.gif)
+
+### A3C
 ![KungFuMaster](images/KungFuMaster_low.gif)
+![Boxing](images/Boxing_low.gif)
 
 ## Train Agent
 ``` 
@@ -87,6 +90,7 @@ optional arguments:
 - [x] BreakoutDeterministic-v4
 - [x] PongDeterministic-v4
 - [x] KungFuMasterDeterministic-v4
+- [x] BoxingDeterministic-v4
 
 ## TODO
 - [x] DQN
@@ -97,6 +101,7 @@ optional arguments:
 - [X] Train model for Pong
 - [x] Achive 300+ score on breakout
 - [x] A3C Agent for KungFuMasterDeterministic-v4
+- [x] A3C Agent for BoxingDeterministic-v4
 - [ ] Parallel processing for A3C
 - [ ] LSTM layer for A3C to replace frame stacking
 
