@@ -11,7 +11,11 @@ def DQNAgent(dueling=False ,**kwargs):
 	return dqn.DQNAgent(**kwargs)
 
 def A3C(**kwargs):
-	return a3c.A3C(**kwargs)
+	if kwargs["lstm"]:
+		agent=a3c.A3C_lstm(**kwargs)
+	else:
+		agent=a3c.A3C(**kwargs)
+	return agent
 
 def EnvBatch(**kwargs):
 	return a3c.EnvBatch(**kwargs)
