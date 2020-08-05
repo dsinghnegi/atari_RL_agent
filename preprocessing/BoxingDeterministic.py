@@ -52,10 +52,11 @@ def PrimaryAtariWrap(env, clip_rewards=True, scale=100):
     return env
 
 
-def make_env(clip_rewards=True, seed=None):
+def make_env(clip_rewards=True, seed=None, lstm=False):
     env = gym.make(ENV_NAME)  # create raw env
     if seed is not None:
         env.seed(seed)
     env=PrimaryAtariWrap(env,clip_rewards=clip_rewards)
-    env = FrameBuffer(env, n_frames=4)
+    if not lstm:
+        env = FrameBuffer(env, n_frames=4)
     return env
