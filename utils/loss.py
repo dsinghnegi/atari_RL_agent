@@ -5,7 +5,7 @@ from torch.nn import functional as F
 
 
 def compute_A3C_loss(states, actions, rewards, next_states, is_done,
-					agent, gamma=0.99,	device=torch.device('cpu')):
+					agent, hidden_unit=None, gamma=0.99,	device=torch.device('cpu')):
 
 	states = torch.tensor(states, device=device, dtype=torch.float)    # shape: [batch_size, *state_shape]
 
@@ -21,8 +21,12 @@ def compute_A3C_loss(states, actions, rewards, next_states, is_done,
 	)  # shape: [batch_size]
 
 	# logits[n_envs, n_actions] and state_values[n_envs, n_actions]
-	logits, state_values = agent(states)
-	next_logits, next_state_values = agent(next_states)
+	if  hidden_unit is not None:
+		(logits, state_values), hidden_unit = agent(states, hidden_unit)
+		(next_logits, next_state_values),  hidden_unit = agent(next_states, hidden_unit)
+	else:
+		(logits, state_values) = agent(states)
+		(next_logits, next_state_values) = agent(next_states)
 
 	# There is no next state if the episode is done!
 	next_state_values = next_state_values * (1 - is_done)
@@ -36,7 +40,10 @@ def compute_A3C_loss(states, actions, rewards, next_states, is_done,
 	# log-probabilities only for agent's chosen actions
 	logp_actions = torch.sum(logprobs.gather(1,actions.view(-1,1)), axis=-1) # [n_envs,]
 
+	# print(logp_actions)
+	# print("######",torch.sum(logprobs.gather(1,actions.view(-1,1)), axis=1))
 	# print(logprobs.gather(1,actions.view(-1,1)))
+	# print(logp_actions.shape)
 	
 	# Compute advantage using rewards_ph, state_values and next_state_values.
 	advantage = rewards + gamma*next_state_values - state_values
@@ -44,15 +51,17 @@ def compute_A3C_loss(states, actions, rewards, next_states, is_done,
 	assert len(advantage.shape) == 1, "please compute advantage for each sample, vector of shape [n_envs,]"
 
 	# Compute policy entropy given logits_seq. Mind the "-" sign!
+	# print(probs, logprobs)
 	entropy = -torch.sum(probs*logprobs, axis=1)
 	assert len(entropy.shape) == 1, "please compute pointwise entropy vector of shape [n_envs,] "
 
 	# Compute target state values using temporal difference formula. Use rewards_ph and next_step_values
 
-	actor_loss = -torch.mean(logp_actions * advantage.detach()) - 0.001 * torch.mean(entropy)
+	actor_loss = (-logp_actions * advantage.detach()).mean() - 0.001 * (entropy).mean()
 	target_state_values = rewards+gamma*next_state_values
 	# print(target_state_values)
 	critic_loss = torch.mean((state_values - target_state_values.detach())**2)
-	loss = actor_loss + critic_loss	
+	# print(critic_loss,actor_loss,torch.mean(logp_actions * advantage.detach()),  torch.mean(entropy))
+	loss = actor_loss + 0.5*critic_loss	
 	
 	return loss, entropy
