@@ -28,18 +28,22 @@ def evaluate_A3C(env, agent, n_games=1):
 	"""Plays an a game from start till done, returns per-game rewards """
 
 	game_rewards = []
-	for _ in range(n_games):
-		state = env.reset()
+	n_lives=max(env.unwrapped.ale.lives(),1)
 
-		total_reward = 0
-		while True:
-			action = agent.sample_actions(agent([state]))[0]
-			state, reward, done, info = env.step(action)
-			total_reward += reward
-			# if reward !=0:
-			# 	print(reward)
-			if done:
-				break
+	for _ in range(n_games):
+		for i in range(n_lives):
+			state = env.reset()
+			total_reward = 0
+			while True:
+				# action = agent.sample_actions(agent([state]))[0]
+				agent_outputs = agent([state])
+				action =agent.best_actions(agent_outputs)[0]
+				state, reward, done, info = env.step(action)
+				total_reward += reward
+				# if reward !=0:
+				# 	print(reward)
+				if done:
+					break
 
 		game_rewards.append(total_reward)
 	return np.mean(game_rewards)
