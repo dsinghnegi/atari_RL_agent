@@ -91,6 +91,7 @@ optional arguments:
 - [x] PongDeterministic-v4
 - [x] KungFuMasterDeterministic-v4
 - [x] BoxingDeterministic-v4
+- [ ] SapecInvadersDeterministic-v4
 
 ## TODO
 - [x] DQN
@@ -113,4 +114,5 @@ The Apache-2.0 License. Please see the [license file](LICENSE) for more informat
 - https://github.com/yandexdataschool/Practical_RL
 - https://github.com/openai/baselines/blob/master/baselines/deepq/replay_buffer.py
 - https://towardsdatascience.com/tutorial-double-deep-q-learning-with-dueling-network-architectures-4c1b3fb7f756
-
+- https://pytorch.org/docs/stable/notes/multiprocessing.html
+- https://github.com/ikostrikov/pytorch-a3c
