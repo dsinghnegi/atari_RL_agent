@@ -69,7 +69,7 @@ def train(make_env, EnvBatch, agent, device, writer, opt):
 	print("Score without training: {}".format(score))
 
 
-	env_batch = EnvBatch(make_env=make_env, n_envs=128, clip_rewards=True, lstm=opt.lstm)
+	env_batch = EnvBatch(make_env=make_env, n_envs=32, clip_rewards=True, lstm=opt.lstm)
 	batch_states = env_batch.reset()
 	grad_norm=0
 	hidden_unit=None

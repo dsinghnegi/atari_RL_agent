@@ -28,7 +28,7 @@ class A3C(nn.Module):
 
 
 			nn.Flatten(),
-			nn.Linear(512,self.hidden),
+			nn.Linear(2592,self.hidden),
 
 		)
 
@@ -60,9 +60,17 @@ class A3C(nn.Module):
 		logits, state_values = agent_outputs
 		logits=logits.detach().cpu().numpy()
 		state_values=state_values.detach().cpu().numpy()
-		policy = np.exp(logits) / np.sum(np.exp(logits), axis=-1, keepdims=True)
+		policy = np.exp(logits) / np.sum(np.exp(logits), axis=1, keepdims=True)
 
 		return np.array([np.random.choice(len(p), p=p) for p in policy])
+
+	def best_actions(self, agent_outputs):
+		"""pick actions given numeric agent outputs (np arrays)"""
+		logits, state_values = agent_outputs
+		logits=logits.detach().cpu().numpy()
+		state_values=state_values.detach().cpu().numpy()
+		policy = np.exp(logits) / np.sum(np.exp(logits), axis=1, keepdims=True)
+		return np.array([np.argmax(p) for p in policy])
 
 
 class A3C_lstm(nn.Module):
@@ -79,15 +87,15 @@ class A3C_lstm(nn.Module):
 			nn.ReLU(),
 			# nn.BatchNorm2d(32),
 
-			nn.Conv2d(32,64,3,2),
+			nn.Conv2d(32,32,3,2),
 			nn.ReLU(),
 			# nn.BatchNorm2d(64),
 
-			nn.Conv2d(64,64,3,2),
+			nn.Conv2d(64,32,3,2),
 			nn.ReLU(),
 			# nn.BatchNorm2d(64),
 
-			nn.Conv2d(64,64,3,2),
+			nn.Conv2d(32,32,3,2),
 			nn.ReLU(),
 			
 			nn.Flatten(),
@@ -141,7 +149,7 @@ class A3C_lstm(nn.Module):
 		logits, state_values = agent_outputs
 		logits=logits.detach().cpu().numpy()
 		state_values=state_values.detach().cpu().numpy()
-		policy = np.exp(logits) / np.sum(np.exp(logits), axis=-1, keepdims=True)
+		policy = np.exp(logits) / np.sum(np.exp(logits), axis=1, keepdims=True)
 
 		return np.array([np.random.choice(len(p), p=p) for p in policy])
 
@@ -150,7 +158,7 @@ class A3C_lstm(nn.Module):
 		logits, state_values = agent_outputs
 		logits=logits.detach().cpu().numpy()
 		state_values=state_values.detach().cpu().numpy()
-		policy = np.exp(logits) / np.sum(np.exp(logits), axis=-1, keepdims=True)
+		policy = np.exp(logits) / np.sum(np.exp(logits), axis=1, keepdims=True)
 
 		return np.array([np.argmax(p) for p in policy])
 	
