@@ -31,8 +31,9 @@ def compute_A3C_loss(states, actions, rewards, next_states, is_done,
 	# There is no next state if the episode is done!
 	next_state_values = next_state_values * (1 - is_done)
 
-	# print(next_state_values)
-	# probabilities and log-probabilities for all actions
+	for i in range(len(next_state_values)-2,-1,-1):
+		next_state_values[i] = next_state_values[i+1] + gamma*rewards[i+1] 		
+
 	probs = F.softmax(logits,dim=1)
 	logprobs = F.log_softmax(logits,dim=1)     # [n_envs, n_actions]
 
