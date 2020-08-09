@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
-
+import numpy as np
 
 
 def compute_A3C_loss(states, actions, rewards, next_states, is_done,
@@ -34,34 +34,31 @@ def compute_A3C_loss(states, actions, rewards, next_states, is_done,
 	# print(next_state_values)
 	# probabilities and log-probabilities for all actions
 	probs = F.softmax(logits,dim=1)
-	# print(probs)            # [n_envs, n_actions]
 	logprobs = F.log_softmax(logits,dim=1)     # [n_envs, n_actions]
-	# print(logprobs)
+
 	# log-probabilities only for agent's chosen actions
 	logp_actions = torch.sum(logprobs.gather(1,actions.view(-1,1)), axis=-1) # [n_envs,]
 
-	# print(logp_actions)
-	# print("######",torch.sum(logprobs.gather(1,actions.view(-1,1)), axis=1))
-	# print(logprobs.gather(1,actions.view(-1,1)))
-	# print(logp_actions.shape)
 	
 	# Compute advantage using rewards_ph, state_values and next_state_values.
 	advantage = rewards + gamma*next_state_values - state_values
-	# print(advantage)
 	assert len(advantage.shape) == 1, "please compute advantage for each sample, vector of shape [n_envs,]"
 
 	# Compute policy entropy given logits_seq. Mind the "-" sign!
-	# print(probs, logprobs)
 	entropy = -torch.sum(probs*logprobs, axis=1)
 	assert len(entropy.shape) == 1, "please compute pointwise entropy vector of shape [n_envs,] "
 
 	# Compute target state values using temporal difference formula. Use rewards_ph and next_step_values
-
-	actor_loss = (-logp_actions * advantage.detach()).mean() - 0.001 * (entropy).mean()
+	actor_loss = -(logp_actions * advantage.detach()).mean() - 0.001 * (entropy).mean()
+	
+	# Actor or state loss
 	target_state_values = rewards+gamma*next_state_values
-	# print(target_state_values)
-	critic_loss = torch.mean((state_values - target_state_values.detach())**2)
-	# print(critic_loss,actor_loss,torch.mean(logp_actions * advantage.detach()),  torch.mean(entropy))
-	loss = actor_loss + 0.5*critic_loss	
+	critic_loss = F.mse_loss(state_values, target_state_values.detach())
+
+
+	loss = actor_loss + critic_loss	
+
+	assert abs(actor_loss) < 100 and abs(critic_loss) < 100, "losses seem abnormally large"
+	assert 0 <= entropy.mean() <= np.log(logprobs.shape[1]), "impossible entropy value, double-check the formula pls"
 	
 	return loss, entropy
