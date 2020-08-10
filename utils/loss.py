@@ -15,7 +15,7 @@ def compute_A3C_loss(states, actions, rewards, next_states, is_done,
 	# shape: [batch_size, *state_shape]
 	next_states = torch.tensor(next_states, device=device, dtype=torch.float)
 	is_done = torch.tensor(
-		is_done.astype('float32'),
+		is_done,
 		device=device,
 		dtype=torch.float
 	)  # shape: [batch_size]
