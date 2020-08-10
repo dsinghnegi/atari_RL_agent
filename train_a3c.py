@@ -1,7 +1,6 @@
 import os
 import argparse
 import re
-import concurrent.futures
 
 import torch
 from torch import nn
@@ -50,7 +49,7 @@ def ensure_shared_grads(model, shared_model):
             return
         shared_param._grad = param.grad
 
-def train(make_env, agent, shared_agent, device, writer, opt, process_number):
+def train(make_env, agent, shared_agent, optim, device, writer, opt, process_number):
 	total_steps = opt.total_steps
 	num_steps = opt.num_steps
 	checkpoint_path=opt.train_dir
@@ -65,7 +64,8 @@ def train(make_env, agent, shared_agent, device, writer, opt, process_number):
 
 	gamma=opt.gamma	
 
-	optim = torch.optim.Adam(shared_agent.parameters(), lr=opt.lr)
+	agent=agent.to(device)
+	shared_agent=shared_agent.to(device)
 	agent.train()
 
 	env = make_env(lstm=opt.lstm, clip_rewards=True)
@@ -77,16 +77,16 @@ def train(make_env, agent, shared_agent, device, writer, opt, process_number):
 
 	evaluate= evaluate_A3C_lstm if opt.lstm else evaluate_A3C	
 
-	score=evaluate(make_env(lstm=opt.lstm, clip_rewards=False), agent)
-	print("Score without training: {}".format(score))
+	# score=evaluate(make_env(lstm=opt.lstm, clip_rewards=False), agent)
+	# print("Score without training: {}".format(score))
 
-
+	
 	env = make_env(clip_rewards=True, lstm=opt.lstm)
 	state = env.reset()
 	grad_norm=0
 	hidden_unit=None
 
-	for step in trange(step,total_steps + 1):
+	for step in range(step,total_steps + 1):
 		agent.load_state_dict(shared_agent.state_dict())
 
 		state_list= []
@@ -121,17 +121,18 @@ def train(make_env, agent, shared_agent, device, writer, opt, process_number):
 											next_state_list, done_list, agent,
 											hidden_unit=hidden_unit,
 											gamma=gamma,device=device)
+
 		optim.zero_grad()
 		loss.backward()
 		grad_norm = nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
-		ensure_shared_grads(model, shared_model)
+		ensure_shared_grads(agent, shared_agent)
 		optim.step()
 
-		if step % loss_freq == 0:
+		if process_number==0 and step % loss_freq == 0:
 			td_loss=loss.data.cpu().item()
 			
 			assert not np.isnan(td_loss)
-
+			print("{} Loss: {} process:{}".format(step, td_loss, process_number+1))
 			writer.add_scalar("Loss/process:{}".format(process_number+1), td_loss, step)
 			writer.add_scalar("Grad norm/process:{}".format(process_number+1), grad_norm, step)
 			writer.add_scalar("Policy entropy/process:{}".format(process_number+1), entropy.mean(), step)
@@ -142,9 +143,10 @@ def train(make_env, agent, shared_agent, device, writer, opt, process_number):
 				mean_rw=evaluate(make_env(clip_rewards=False, lstm=opt.lstm), agent)
 				print("MEAN REWARD:{}".format(mean_rw))
 				writer.add_scalar("Mean reward", mean_rw, step)
+				
 				torch.save(agent.state_dict(), os.path.join(checkpoint_path,"agent_{}.pth".format(step)))
-	
-			writer.close()
+				
+				writer.close()
 			
 	if process_number==0:
 		torch.save(agent.state_dict(), os.path.join(checkpoint_path,"agent_{}.pth".format(total_steps)))
@@ -172,11 +174,12 @@ def main():
 	n_actions = env.action_space.n
 		
 
-	shared_agent = A3C(n_actions=n_actions, lstm=opt.lstm).to(device)
+	shared_agent = A3C(n_actions=n_actions, lstm=opt.lstm)
 	
 	# NOTE: this is required for the ``fork`` method to work
 	# For more details: https://pytorch.org/docs/stable/notes/multiprocessing.html
 	shared_agent.share_memory()
+	optim = torch.optim.Adam(shared_agent.parameters(), lr=opt.lr)
 
 	# writer.add_graph(shared_agent, torch.tensor([env.reset()]).to(device))
 	# writer.close()
@@ -185,7 +188,7 @@ def main():
 	processes = []
 
 	for rank in range(0,opt.num_processes):
-		p = mp.Process(target=train, args=(ENV.make_env, A3C(n_actions=n_actions, lstm=opt.lstm).to(device), shared_agent, device, writer, opt, rank))
+		p = mp.Process(target=train, args=(ENV.make_env, A3C(n_actions=n_actions, lstm=opt.lstm), shared_agent, optim, device, writer, opt, rank))
 		p.start()
 		processes.append(p)
 
