@@ -116,3 +116,5 @@ The Apache-2.0 License. Please see the [license file](LICENSE) for more informat
 - https://towardsdatascience.com/tutorial-double-deep-q-learning-with-dueling-network-architectures-4c1b3fb7f756
 - https://pytorch.org/docs/stable/notes/multiprocessing.html
 - https://github.com/ikostrikov/pytorch-a3c
+- https://arxiv.org/pdf/1506.02438.pdf
+- https://arxiv.org/abs/1602.01783
