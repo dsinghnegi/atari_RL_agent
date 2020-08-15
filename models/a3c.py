@@ -12,23 +12,21 @@ def normalized_columns_initializer(weights, std=1.0):
 
 
 def weights_init(m):
-	classname = m.__class__.__name__
-	relu_gain = nn.init.calculate_gain('relu')
-	if classname.find('Conv') != -1:
-		weight_shape = list(m.weight.data.size())
-		fan_in = np.prod(weight_shape[1:4])
-		fan_out = np.prod(weight_shape[2:4]) * weight_shape[0]
-		w_bound = np.sqrt(6. / (fan_in + fan_out))
-		m.weight.data.uniform_(-w_bound, w_bound)
-		m.bias.data.fill_(0)
-		m.weight.data.mul_(relu_gain)
-	elif classname.find('Linear') != -1:
-		weight_shape = list(m.weight.data.size())
-		fan_in = weight_shape[1]
-		fan_out = weight_shape[0]
-		w_bound = np.sqrt(6. / (fan_in + fan_out))
-		m.weight.data.uniform_(-w_bound, w_bound)
-		m.bias.data.fill_(0)
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        weight_shape = list(m.weight.data.size())
+        fan_in = np.prod(weight_shape[1:4])
+        fan_out = np.prod(weight_shape[2:4]) * weight_shape[0]
+        w_bound = np.sqrt(6. / (fan_in + fan_out))
+        m.weight.data.uniform_(-w_bound, w_bound)
+        m.bias.data.fill_(0)
+    elif classname.find('Linear') != -1:
+        weight_shape = list(m.weight.data.size())
+        fan_in = weight_shape[1]
+        fan_out = weight_shape[0]
+        w_bound = np.sqrt(6. / (fan_in + fan_out))
+        m.weight.data.uniform_(-w_bound, w_bound)
+        m.bias.data.fill_(0)
 
 
 class A3C(nn.Module):
@@ -107,7 +105,7 @@ class A3C(nn.Module):
 		
 
 class A3C_lstm(nn.Module):
-	def __init__(self, n_actions, hidden=512, lstm=True):
+	def __init__(self, n_actions, hidden=256, lstm=True):
 
 		super().__init__()
 		assert lstm, \
@@ -116,34 +114,32 @@ class A3C_lstm(nn.Module):
 		self.hidden=hidden
 
 		self.network=nn.Sequential(
-			nn.Conv2d(1,32,3,2),
+			nn.Conv2d(1,32,3,2,1),
 			nn.ReLU(),
 			# nn.BatchNorm2d(32),
 
-			nn.Conv2d(32,32,3,2),
+			nn.Conv2d(32,32,3,2,1),
 			nn.ReLU(),
 			# nn.BatchNorm2d(64),
 
-			nn.Conv2d(32,32,3,2),
+			nn.Conv2d(32,32,3,2,1),
 			nn.ReLU(),
 			# nn.BatchNorm2d(64),
 
-			# nn.Conv2d(32,32,3,2),
-			# nn.ReLU(),
+			nn.Conv2d(32,32,3,2,1),
+			nn.ReLU(),
 			
 			nn.Flatten(),
 		)
 
-		self.lstm_layer=nn.LSTMCell(512, self.hidden)
+		self.lstm_layer=nn.LSTMCell(288, self.hidden)
 
 
 		self.logits_network = nn.Sequential(
-			nn.ReLU(), 
 			nn.Linear(self.hidden,self.n_actions),
 			)
 
 		self.state_value_network = nn.Sequential(
-			nn.ReLU(), 
 			nn.Linear(self.hidden,1),
 			)
 
@@ -176,11 +172,11 @@ class A3C_lstm(nn.Module):
 				 
 	def forward(self, state_t, hidden_unit=None):
 		model_device = next(self.parameters()).device
-		state_t = torch.tensor(state_t, device=model_device, dtype=torch.float)/255
+		state_t = torch.tensor(state_t, device=model_device, dtype=torch.float)
 		
 		if hidden_unit is None:
-			cx = Variable(torch.zeros(state_t.size(0), 512).to(model_device))
-			hx = Variable(torch.zeros(state_t.size(0), 512).to(model_device))
+			cx = Variable(torch.zeros(state_t.size(0), 256).to(model_device))
+			hx = Variable(torch.zeros(state_t.size(0), 256).to(model_device))
 		else:
 			(hx, cx)=hidden_unit
 			hx=hx.detach()
