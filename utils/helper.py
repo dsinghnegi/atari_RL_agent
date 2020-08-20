@@ -59,7 +59,7 @@ def evaluate_A3C_lstm(env, agent, n_games=1):
 		total_reward = 0
 		while True:
 			agent_outputs, hidden_unit = agent([state], hidden_unit)
-			action =agent.sample_actions(agent_outputs)[0]
+			action =agent.best_actions(agent_outputs)[0]
 			state, reward, done, info = env.step(action)
 			total_reward += reward
 			# if reward !=0:
