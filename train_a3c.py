@@ -68,7 +68,7 @@ def train(make_env, shared_agent, optim, device, opt, process_number):
 	evaluate= evaluate_A3C_lstm if opt.lstm else evaluate_A3C	
 
 	
-	env = make_env(clip_rewards=True, lstm=opt.lstm)
+	env = make_env(clip_rewards=False, lstm=opt.lstm)
 	state = env.reset()
 	grad_norm=0
 	hidden_unit=None
@@ -120,6 +120,7 @@ def train(make_env, shared_agent, optim, device, opt, process_number):
 			
 			if done:
 				state= env.reset()
+				hidden_unit=None
 				if process_number==0:
 					writer.add_scalar("Episode/Length", episode_length, step)
 					writer.add_scalar("Episode/Reward",episode_reward, step)
@@ -128,7 +129,7 @@ def train(make_env, shared_agent, optim, device, opt, process_number):
 
 			values.append(value)
 			log_policies.append(log_policy.gather(1, action))
-			rewards.append(reward)
+			rewards.append(np.sign(reward))
 			entropies.append(entropy)
 
 			if done:				
