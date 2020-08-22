@@ -17,7 +17,9 @@ def get_args():
 	ap.add_argument("-c", "--checkpoint",required=True ,help="checkpoint for agent")
 	ap.add_argument("-v", "--video", default="videos" ,help="videos_dir")
 	ap.add_argument("--lstm", action='store_true', help="Enable LSTM")
-	
+	ap.add_argument("--device", default=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
+		help="Device for training")
+
 	opt = ap.parse_args()
 	return opt
 
@@ -29,7 +31,7 @@ def main():
 		"Unsupported environment: {} \nSupported environemts: {}".format(opt.environment, environment.ENV_DICT.keys())
 
 
-	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+	device = opt.device
 
 	evaluate=evaluate_A3C_lstm if opt.lstm else evaluate_A3C
 
@@ -41,7 +43,7 @@ def main():
 	n_actions = env.action_space.n
 	
 	agent = A3C(n_actions=n_actions, lstm=opt.lstm).to(device)
-	agent.load_state_dict(torch.load(opt.checkpoint))
+	agent.load_state_dict(torch.load(opt.checkpoint, map_location=torch.device(device)))
 
 	env_monitor = gym.wrappers.Monitor(ENV.make_env(clip_rewards=False, lstm=opt.lstm), directory=opt.video, force=True)
 	

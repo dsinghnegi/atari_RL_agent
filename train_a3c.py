@@ -35,11 +35,13 @@ def get_args():
 	ap.add_argument("--gae_lambda", default=1.0, type=float, help="gae lambda")
 	ap.add_argument("--entropy_coef", default=0.01, type=float, help="entropy coef")
 	ap.add_argument("--gamma", default=0.99, type=float, help="Discounting factor")	
-	ap.add_argument("--total_steps", default=int(10e5), type=int, help="Training steps")
+	ap.add_argument("--total_steps", default=int(10e6), type=int, help="Training steps")
 	ap.add_argument("--num_steps", default=20, type=int, help="number steps for update")
 	ap.add_argument("--loss_freq", default=50, type=int, help="loss frequency")
 	ap.add_argument("--eval_freq", default=2500, type=int, help="Evalualtion frequency")
 	ap.add_argument("--lstm", action='store_true', help="Enable LSTM")
+	ap.add_argument("--device", default=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
+		help="Device for training")
 
 	
 	opt = ap.parse_args()
@@ -81,7 +83,7 @@ def train(make_env, shared_agent, optim, device, opt, process_number):
 	shared_agent.train()
 
 	if opt.checkpoint:
-		agent.load_state_dict(torch.load(opt.checkpoint))
+		agent.load_state_dict(torch.load(opt.checkpoint, map_location=torch.device(device)))
 		step=int(re.findall(r'\d+', opt.checkpoint)[-1])
 
 
@@ -211,7 +213,7 @@ def main():
 	if opt.tpu:
 		device =tpu.get_TPU()
 	else:
-		device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+		device = opt.device
 
 	mp = _mp.get_context("spawn")
 
