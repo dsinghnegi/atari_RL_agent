@@ -36,7 +36,7 @@ def evaluate_A3C(env, agent, n_games=1):
 			total_reward = 0
 			while True:
 				# action = agent.sample_actions(agent([state]))[0]
-				agent_outputs = agent([state])
+				agent_outputs,_ = agent([state])
 				action =agent.best_actions(agent_outputs)[0]
 				state, reward, done, info = env.step(action)
 				total_reward += reward

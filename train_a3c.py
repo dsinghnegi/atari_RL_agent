@@ -63,19 +63,18 @@ def train(make_env, shared_agent, optim, device, opt, process_number):
 		os.mkdir(checkpoint_path)
 	
 
-
-	env = make_env(lstm=opt.lstm, clip_rewards=True)
 	step = 0
-	state = env.reset()
 	evaluate= evaluate_A3C_lstm if opt.lstm else evaluate_A3C	
 
 	
 	env = make_env(clip_rewards=False, lstm=opt.lstm)
 	state = env.reset()
+
 	grad_norm=0
 	hidden_unit=None
 
 	n_actions = env.action_space.n
+
 	agent=A3C(n_actions=n_actions, lstm=opt.lstm)
 	agent=agent.to(device)
 	shared_agent=shared_agent.to(device)
@@ -103,11 +102,8 @@ def train(make_env, shared_agent, optim, device, opt, process_number):
 		entropies = []
 
 		for _ in range(num_steps):
-			if opt.lstm:
-				(logits, value), hidden_unit = agent([state], hidden_unit)
-			else:
-				(logits, value) = agent([state])
-
+			(logits, value), hidden_unit = agent([state], hidden_unit)
+			
 
 			policy = F.softmax(logits, dim=1)
 			log_policy = F.log_softmax(logits, dim=1)
@@ -123,9 +119,11 @@ def train(make_env, shared_agent, optim, device, opt, process_number):
 			if done:
 				state= env.reset()
 				hidden_unit=None
+		
 				if process_number==0:
 					writer.add_scalar("Episode/Length", episode_length, step)
 					writer.add_scalar("Episode/Reward",episode_reward, step)
+		
 				episode_length=0
 				episode_reward=0
 
@@ -139,12 +137,8 @@ def train(make_env, shared_agent, optim, device, opt, process_number):
 		
 		R = torch.zeros((1, 1), dtype=torch.float).to(device)
 		if not done:
-			if opt.lstm:
-				(_, R), _ = agent([state], hidden_unit)
-			else:
-				(_, R) = agent([state])
-
-
+			(_, R), _ = agent([state], hidden_unit)
+	
 		gae = torch.zeros((1, 1), dtype=torch.float).to(device)
 		actor_loss = 0
 		critic_loss = 0
@@ -180,22 +174,21 @@ def train(make_env, shared_agent, optim, device, opt, process_number):
 
 
 		if process_number==0 and step % loss_freq == 0:
-			td_loss=total_loss.data.cpu().item()
+			loss=total_loss.data.cpu().item()
+
+			print("[{}] Loss: {} process: {}".format(step, loss, process_number+1))
 			
-			assert not np.isnan(td_loss)
-			print("[{}] Loss: {} process: {}".format(step, td_loss, process_number+1))
-			writer.add_scalar("Training/Loss", td_loss, step)
+			writer.add_scalar("Training/Loss", loss, step)
 			writer.add_scalar("Training/Grad norm", grad_norm, step)
 			writer.add_scalar("Training/Policy entropy", entropy_loss, step)
 			
 
-		if step % eval_freq == 0:
-			if process_number==0:
+		if process_number==0 and step % eval_freq == 0:
 				mean_rw=evaluate(make_env(clip_rewards=False, lstm=opt.lstm), agent)
 				writer.add_scalar("Mean reward", mean_rw, step)
-				
-				torch.save(agent.state_dict(), os.path.join(checkpoint_path,"agent_{}.pth".format(step)))
 				writer.close()
+
+				torch.save(agent.state_dict(), os.path.join(checkpoint_path,"agent_{}.pth".format(step)))
 				
 	if process_number==0:
 		torch.save(agent.state_dict(), os.path.join(checkpoint_path,"agent_{}.pth".format(total_steps)))
