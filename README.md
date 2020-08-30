@@ -1,5 +1,5 @@
 # Atari RL agent
-Reinforcement learining based agents to playing atari games.
+Reinforcement learning based agents to playing Atari games.
 
 ## Agents
 - Deep Q-network(DQN)
@@ -11,6 +11,7 @@ Reinforcement learining based agents to playing atari games.
   - Multiprocess support
   - Multiprocess Cuda support
   - LSTM based model
+  - Generalized Advantage Estimate (GAE)
   - Frame stacking based model
 
 ## Game Play
@@ -21,6 +22,7 @@ Reinforcement learining based agents to playing atari games.
 ### A3C
 ![KungFuMaster](images/KungFuMaster_low.gif)
 ![Boxing](images/Boxing_low.gif)
+![SpaceInvaders](images/SpaceInvaders_low.gif)
 
 
 
