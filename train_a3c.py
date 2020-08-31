@@ -64,7 +64,7 @@ def train(make_env, shared_agent, optim, device, opt, process_number):
 	
 
 	step = 0
-	evaluate= evaluate_A3C_lstm if opt.lstm else evaluate_A3C	
+	evaluate= evaluate_A3C_lstm 
 
 	
 	env = make_env(clip_rewards=False, lstm=opt.lstm)

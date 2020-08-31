@@ -33,8 +33,7 @@ def main():
 
 	device = opt.device
 
-	evaluate=evaluate_A3C_lstm if opt.lstm else evaluate_A3C
-
+	evaluate=evaluate_A3C_lstm 
 	ENV=environment.ENV_DICT[opt.environment]
 
 	env = ENV.make_env(clip_rewards=False)
