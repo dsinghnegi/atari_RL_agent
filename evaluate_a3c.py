@@ -44,6 +44,8 @@ def main():
 	agent = A3C(n_actions=n_actions, lstm=opt.lstm).to(device)
 	agent.load_state_dict(torch.load(opt.checkpoint, map_location=torch.device(device)))
 
+	agent=agent.eval()
+
 	env_monitor = gym.wrappers.Monitor(ENV.make_env(clip_rewards=False, lstm=opt.lstm), directory=opt.video, force=True)
 	
 	reward=evaluate(env_monitor, agent) 
