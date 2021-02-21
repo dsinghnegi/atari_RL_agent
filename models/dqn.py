@@ -1,6 +1,7 @@
+import numpy as np
 import torch
 import torch.nn as nn
-import  numpy as np
+
 
 # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -8,9 +9,9 @@ import  numpy as np
 def weights_init(m):
     classname = m.__class__.__name__
     if classname.find('Conv') != -1:
-        nn.init.xavier_normal_(m.weight.data,gain=nn.init.calculate_gain('relu'))
+        nn.init.xavier_normal_(m.weight.data, gain=nn.init.calculate_gain('relu'))
     elif type(m) == nn.Linear:
-        nn.init.xavier_normal_(m.weight,gain=nn.init.calculate_gain('relu'))
+        nn.init.xavier_normal_(m.weight, gain=nn.init.calculate_gain('relu'))
         m.bias.data.fill_(0.01)
 
 
@@ -24,33 +25,31 @@ class DQNAgent(nn.Module):
 
         # Define your network body here. Please make sure agent is fully contained here
         # nn.Flatten() can be useful
-        self.network=nn.Sequential(
-            nn.Conv2d(4,32,3,2),
+        self.network = nn.Sequential(
+            nn.Conv2d(4, 32, 3, 2),
             nn.ReLU(),
             nn.BatchNorm2d(32),
 
-
-            nn.Conv2d(32,64,3,2),
+            nn.Conv2d(32, 64, 3, 2),
             nn.ReLU(),
             nn.BatchNorm2d(64),
 
-
-            nn.Conv2d(64,128,3,2),
+            nn.Conv2d(64, 128, 3, 2),
             nn.ReLU(),
             nn.BatchNorm2d(128),
-            
-            nn.Conv2d(128,256,3,2),
+
+            nn.Conv2d(128, 256, 3, 2),
             nn.ReLU(),
             nn.BatchNorm2d(256),
 
             nn.Flatten(),
-            nn.Linear(2304,1024),
+            nn.Linear(2304, 1024),
             # nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.Linear(1024,n_actions),
+            nn.Linear(1024, n_actions),
 
         )
-        
+
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
@@ -59,8 +58,6 @@ class DQNAgent(nn.Module):
             elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
-        
-        
 
     def forward(self, state_t):
         """
@@ -68,7 +65,7 @@ class DQNAgent(nn.Module):
         :param state_t: a batch of 4-frame buffers, shape = [batch_size, 4, h, w]
         """
         model_device = next(self.parameters()).device
-        state_t = torch.tensor(state_t, device=model_device, dtype=torch.float)/128.0 -1.0   
+        state_t = torch.tensor(state_t, device=model_device, dtype=torch.float) / 128.0 - 1.0
 
         qvalues = self.network(state_t)
         return qvalues
@@ -90,5 +87,5 @@ class DQNAgent(nn.Module):
         best_actions = qvalues.argmax(axis=-1)
 
         should_explore = np.random.choice(
-            [0, 1], batch_size, p=[1-epsilon, epsilon])
+            [0, 1], batch_size, p=[1 - epsilon, epsilon])
         return np.where(should_explore, random_actions, best_actions)

@@ -1,1 +1,23 @@
-{"initial_reset_timestamp": 1596796136.368777, "timestamps": [1596796141.0899775, 1596796145.8068697, 1596796148.7729502], "episode_lengths": [888, 888, 888], "episode_rewards": [500.0, 500.0, 500.0], "episode_types": ["t", "t", "t"]}
+{
+  "initial_reset_timestamp": 1596796136.368777,
+  "timestamps": [
+    1596796141.0899775,
+    1596796145.8068697,
+    1596796148.7729502
+  ],
+  "episode_lengths": [
+    888,
+    888,
+    888
+  ],
+  "episode_rewards": [
+    500.0,
+    500.0,
+    500.0
+  ],
+  "episode_types": [
+    "t",
+    "t",
+    "t"
+  ]
+}

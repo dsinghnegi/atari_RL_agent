@@ -1,15 +1,13 @@
-import random
-import numpy as np
+import cv2
 import gym
 from gym.core import ObservationWrapper
 from gym.spaces import Box
-import cv2
 
-from preprocessing.framebuffer import FrameBuffer
 from preprocessing import atari_wrappers
-from gym.core import Wrapper
+from preprocessing.framebuffer import FrameBuffer
 
 ENV_NAME = "BreakoutDeterministic-v4"
+
 
 class PreprocessAtariObs(ObservationWrapper):
     def __init__(self, env):
@@ -22,11 +20,11 @@ class PreprocessAtariObs(ObservationWrapper):
     def observation(self, img):
         """what happens to each observation"""
 
-        img=cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
-        img=img[34:34+160,0:160]
-        img=cv2.resize(img,(84,84),cv2.INTER_NEAREST)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        img = img[34:34 + 160, 0:160]
+        img = cv2.resize(img, (84, 84), cv2.INTER_NEAREST)
 
-        return img.reshape(-1,84,84)
+        return img.reshape(-1, 84, 84)
 
 
 def PrimaryAtariWrap(env, clip_rewards=True):
@@ -57,6 +55,6 @@ def make_env(clip_rewards=True, seed=None):
     env = gym.make(ENV_NAME)  # create raw env
     if seed is not None:
         env.seed(seed)
-    env=PrimaryAtariWrap(env,clip_rewards=clip_rewards)
+    env = PrimaryAtariWrap(env, clip_rewards=clip_rewards)
     env = FrameBuffer(env, n_frames=4)
     return env

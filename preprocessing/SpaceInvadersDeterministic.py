@@ -1,11 +1,7 @@
-import random
-import numpy as np
 import gym
-import cv2
 
-from preprocessing.framebuffer import FrameBuffer
 from preprocessing import atari_wrappers
-from gym.core import Wrapper
+from preprocessing.framebuffer import FrameBuffer
 
 ENV_NAME = "SpaceInvadersDeterministic-v4"
 
@@ -37,9 +33,9 @@ def make_env(clip_rewards=True, seed=None, lstm=False):
     env = gym.make(ENV_NAME)  # create raw env    
     env = atari_wrappers.AtariRescale42x42(env)
     env = atari_wrappers.NormalizedEnv(env)
-    
-    env=PrimaryAtariWrap(env,clip_rewards=clip_rewards)
+
+    env = PrimaryAtariWrap(env, clip_rewards=clip_rewards)
     if not lstm:
         env = FrameBuffer(env, n_frames=4)
-    
+
     return env

@@ -3,6 +3,7 @@ import math
 import torch
 import torch.optim as optim
 
+
 class GlobalAdam(torch.optim.Adam):
     def __init__(self, params, lr):
         super(GlobalAdam, self).__init__(params, lr=lr)
@@ -15,6 +16,7 @@ class GlobalAdam(torch.optim.Adam):
 
                 state['exp_avg'].share_memory_()
                 state['exp_avg_sq'].share_memory_()
+
 
 # Taken from https://github.com/ikostrikov/pytorch-a3c
 class SharedAdam(optim.Adam):

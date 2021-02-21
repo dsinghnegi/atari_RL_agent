@@ -1,1 +1,17 @@
-{"stats": "openaigym.episode_batch.0.8616.stats.json", "videos": [["openaigym.video.0.8616.video000000.mp4", "openaigym.video.0.8616.video000000.meta.json"], ["openaigym.video.0.8616.video000001.mp4", "openaigym.video.0.8616.video000001.meta.json"]], "env_info": {"gym_version": "0.17.2", "env_id": "SpaceInvadersDeterministic-v4"}}
+{
+  "stats": "openaigym.episode_batch.0.8616.stats.json",
+  "videos": [
+    [
+      "openaigym.video.0.8616.video000000.mp4",
+      "openaigym.video.0.8616.video000000.meta.json"
+    ],
+    [
+      "openaigym.video.0.8616.video000001.mp4",
+      "openaigym.video.0.8616.video000001.meta.json"
+    ]
+  ],
+  "env_info": {
+    "gym_version": "0.17.2",
+    "env_id": "SpaceInvadersDeterministic-v4"
+  }
+}

@@ -1,32 +1,36 @@
 # Atari RL agent
+
 Reinforcement learning based agents to playing Atari games.
 
 ## Agents
+
 - Deep Q-network(DQN)
-  - Double DQN
-  - Prioritized Replay
-  - Dueiling network
-  
+    - Double DQN
+    - Prioritized Replay
+    - Dueiling network
+
 - Asynchronous Advantage Actor-Critic(A3C)
-  - Multiprocess support
-  - Multiprocess Cuda support
-  - LSTM based model
-  - Generalized Advantage Estimate (GAE)
-  - Frame stacking based model
+    - Multiprocess support
+    - Multiprocess Cuda support
+    - LSTM based model
+    - Generalized Advantage Estimate (GAE)
+    - Frame stacking based model
 
 ## Game Play
+
 ### DQN
+
 ![Pong](images/pong_low.gif)
 ![BreakoutDeterministic](images/breakout_low.gif)
 
 ### A3C
+
 ![KungFuMaster](images/KungFuMaster_low.gif)
 ![Boxing](images/Boxing_low.gif)
 ![SpaceInvaders](images/SpaceInvaders_low.gif)
 
-
-
 ## Supported Environment
+
 - [x] BreakoutDeterministic-v4
 - [x] PongDeterministic-v4
 - [x] KungFuMasterDeterministic-v4
@@ -34,6 +38,7 @@ Reinforcement learning based agents to playing Atari games.
 - [ ] SapecInvadersDeterministic-v4
 
 ## TODO
+
 - [x] DQN
 - [x] TensorBoard support
 - [x] Double DQN
@@ -46,11 +51,12 @@ Reinforcement learning based agents to playing Atari games.
 - [x] Parallel processing for A3C
 - [x] LSTM layer for A3C to replace frame stacking
 
-
 ## License
+
 The Apache-2.0 License. Please see the [license file](LICENSE) for more information.
 
 ## References
+
 - https://github.com/yandexdataschool/Practical_RL
 - https://github.com/openai/baselines/blob/master/baselines/deepq/replay_buffer.py
 - https://towardsdatascience.com/tutorial-double-deep-q-learning-with-dueling-network-architectures-4c1b3fb7f756

@@ -1,9 +1,8 @@
+import numpy as np
 import torch
 import torch.nn as nn
-from torch.nn import functional as F
-
 from torch.autograd import Variable
-import numpy as np
+from torch.nn import functional as F
 
 
 def normalized_columns_initializer(weights, std=1.0):

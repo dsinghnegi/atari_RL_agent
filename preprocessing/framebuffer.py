@@ -1,6 +1,6 @@
 import numpy as np
-from gym.spaces.box import Box
 from gym.core import Wrapper
+from gym.spaces.box import Box
 
 
 class FrameBuffer(Wrapper):
@@ -27,6 +27,5 @@ class FrameBuffer(Wrapper):
 
     def update_buffer(self, img):
         if self.framebuffer is None:
-            self.framebuffer=np.repeat(img, 4, axis=0)
+            self.framebuffer = np.repeat(img, 4, axis=0)
         self.framebuffer = np.append(self.framebuffer[1:, :, :], img, axis=0)
-      

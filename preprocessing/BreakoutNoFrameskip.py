@@ -1,12 +1,12 @@
+import cv2
 import gym
 from gym.core import ObservationWrapper
 from gym.spaces import Box
-import cv2
 
-from preprocessing.framebuffer import FrameBuffer
 from preprocessing import atari_wrappers
+from preprocessing.framebuffer import FrameBuffer
 
-ENV_NAME='BreakoutNoFrameskip-v4'
+ENV_NAME = 'BreakoutNoFrameskip-v4'
 
 
 class PreprocessAtariObs(ObservationWrapper):
@@ -17,20 +17,18 @@ class PreprocessAtariObs(ObservationWrapper):
         self.img_size = (1, 64, 64)
         self.observation_space = Box(0.0, 1.0, self.img_size)
 
-
     def _to_gray_scale(self, rgb, channel_weights=[0.5, 0.2, 0.3]):
-        gray=rgb[:,:,0]*channel_weights[0]+rgb[:,:,1]*channel_weights[1]+rgb[:,:,2]*channel_weights[2]
-        return gray 
-
+        gray = rgb[:, :, 0] * channel_weights[0] + rgb[:, :, 1] * channel_weights[1] + rgb[:, :, 2] * channel_weights[2]
+        return gray
 
     def observation(self, img):
         """what happens to each observation"""
-        
-        img=img[32:-15,7:-7]
-        img=cv2.resize(img,(64,64))
 
-        img=cv2.split(img)[0]
-        img=cv2.equalizeHist(img)
+        img = img[32:-15, 7:-7]
+        img = cv2.resize(img, (64, 64))
+
+        img = cv2.split(img)[0]
+        img = cv2.equalizeHist(img)
         return img.reshape(self.img_size)
 
 
