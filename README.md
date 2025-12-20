@@ -51,6 +51,81 @@ Reinforcement learning based agents to playing Atari games.
 - [x] Parallel processing for A3C
 - [x] LSTM layer for A3C to replace frame stacking
 
+## Video face indexing and human tracking tools
+
+Two standalone utilities under `tools/` help catalog faces in a video and build
+person-level visibility segments for downstream processing.
+
+### 1. Face indexer
+
+The face indexer extracts representative face crops, assigns consistent
+identities using InsightFace embeddings, and records visibility segments where a
+face is present in at least 80% of the frames within a contiguous stretch.
+
+```
+python tools/face_indexer.py \
+  --video path/to/video.mp4 \
+  --output-json faces.json \
+  --collage faces.png \
+  --similarity-threshold 0.4 \
+  --max-gap 10 \
+  --min-visible-ratio 0.8
+```
+
+Output JSON structure (excerpt):
+
+```
+{
+  "video_path": "path/to/video.mp4",
+  "collage": "/abs/path/faces.png",
+  "people": [
+    {
+      "face_id": 1,
+      "selected": true,
+      "embedding": [...],
+      "segments": [
+        {"start_frame": 150, "end_frame": 2300, "visibility_ratio": 0.93}
+      ]
+    }
+  ]
+}
+```
+
+### 2. Human tracker
+
+The tracker consumes the JSON from the face indexer (using only entries marked
+`selected`) and produces per-person segments after tracking and re-identifying
+people through occlusions via YOLOv8 + DeepSORT.
+
+```
+python tools/human_tracker.py \
+  --video path/to/video.mp4 \
+  --face-json faces.json \
+  --output-json tracks.json \
+  --detector yolov8x.pt \
+  --tracking-max-age 30 \
+  --embedding-threshold 0.4 \
+  --max-gap 15 \
+  --min-visible-ratio 0.8
+```
+
+Result JSON example:
+
+```
+{
+  "video_path": "path/to/video.mp4",
+  "people": [
+    {
+      "face_id": 1,
+      "segments": [
+        {"start_frame": 150, "end_frame": 2300, "visibility_ratio": 0.91},
+        {"start_frame": 5000, "end_frame": 8600, "visibility_ratio": 0.88}
+      ]
+    }
+  ]
+}
+```
+
 ## License
 
 The Apache-2.0 License. Please see the [license file](LICENSE) for more information.
