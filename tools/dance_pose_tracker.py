@@ -472,22 +472,140 @@ def extract_frame_number(image_id: str) -> int:
 # ALPHAPOSE PARSER
 # =============================================================================
 
+def iter_entries_from_json(data: Any) -> Any:
+    """
+    Iterate over detection entries from various JSON formats.
+
+    Handles:
+    - List of detection dicts: [{...}, {...}, ...]
+    - Dict with 'annotations' key: {"annotations": [{...}, ...]}
+    - Dict with frame keys: {"frame_0001": [{...}], "frame_0002": [{...}]}
+    """
+    if isinstance(data, list):
+        for d in data:
+            if isinstance(d, dict):
+                yield d
+        return
+
+    if isinstance(data, dict):
+        # Check for 'annotations' key (COCO format)
+        if isinstance(data.get('annotations'), list):
+            for d in data['annotations']:
+                if isinstance(d, dict):
+                    yield d
+            return
+
+        # Check for 'result' key (some AlphaPose outputs)
+        if isinstance(data.get('result'), list):
+            for d in data['result']:
+                if isinstance(d, dict):
+                    yield d
+            return
+
+        # Dict with frame keys as values
+        for k, v in data.items():
+            if isinstance(v, list) and all(isinstance(it, dict) for it in v):
+                for d in v:
+                    d2 = dict(d)
+                    # Add frame key as image_id if not present
+                    if 'image_id' not in d2 and 'imgname' not in d2:
+                        d2['image_id'] = k
+                    yield d2
+
+
+def get_image_id_from_entry(entry: Dict[str, Any], fallback: str = "") -> str:
+    """Extract image/frame identifier from detection entry."""
+    for key in ('image_id', 'imgname', 'image', 'name', 'file_name', 'frame', 'frame_id'):
+        if key in entry and entry[key] is not None:
+            val = entry[key]
+            if isinstance(val, (int, float)):
+                return str(int(val))
+            return str(val)
+    return fallback
+
+
+def get_keypoints_from_entry(entry: Dict[str, Any]) -> Optional[np.ndarray]:
+    """Extract and reshape keypoints from detection entry."""
+    # Try different key names
+    kpts = None
+    for key in ('keypoints', 'pose_keypoints_2d', 'keypoints_2d'):
+        if key in entry and entry[key] is not None:
+            kpts = entry[key]
+            break
+
+    if kpts is None:
+        return None
+
+    try:
+        arr = np.asarray(kpts, dtype=np.float32)
+    except Exception:
+        return None
+
+    # Handle different shapes
+    if arr.ndim == 1:
+        if arr.size % 3 != 0:
+            return None
+        return arr.reshape(-1, 3)
+
+    if arr.ndim == 2:
+        if arr.shape[1] == 2:
+            # Add confidence column (default 1.0)
+            return np.concatenate([arr, np.ones((arr.shape[0], 1), np.float32)], axis=1)
+        if arr.shape[1] == 3:
+            return arr.astype(np.float32)
+
+    return None
+
+
+def get_bbox_from_entry(entry: Dict[str, Any]) -> Optional[np.ndarray]:
+    """Extract bounding box from detection entry."""
+    box = entry.get('box') or entry.get('bbox')
+
+    if box is None or not isinstance(box, (list, tuple, np.ndarray)) or len(box) < 4:
+        return None
+
+    try:
+        x, y, w, h = float(box[0]), float(box[1]), float(box[2]), float(box[3])
+    except (TypeError, ValueError):
+        return None
+
+    # Convert [x, y, w, h] to [x1, y1, x2, y2]
+    # Check if it's already [x1, y1, x2, y2] by seeing if w,h are larger than x,y
+    if w > x and h > y and w > 100 and h > 100:
+        # Likely already [x1, y1, x2, y2]
+        return np.array([x, y, w, h], dtype=np.float32)
+    elif w > 0 and h > 0:
+        # Standard [x, y, w, h] format
+        return np.array([x, y, x + w, y + h], dtype=np.float32)
+    else:
+        return None
+
+
+def get_score_from_entry(entry: Dict[str, Any]) -> float:
+    """Extract detection score from entry."""
+    score = entry.get('score', 0.5)
+    if isinstance(score, (list, tuple)):
+        score = score[0] if score else 0.5
+    try:
+        return float(score)
+    except (TypeError, ValueError):
+        return 0.5
+
+
 class AlphaPoseParser:
     """
     Parse AlphaPose JSON output into Detection objects.
 
-    Expected JSON format (merged single file):
-    [
-        {
-            "image_id": "frame_0001.png",  # or "0001.jpg", etc.
-            "category_id": 1,
-            "keypoints": [x1,y1,c1, x2,y2,c2, ...],  # flattened, 136*3=408 values
-            "score": 0.85,
-            "box": [x, y, width, height],  # top-left x,y and dimensions
-            "idx": [0.0]  # optional person index
-        },
-        ...
-    ]
+    Supports multiple JSON formats:
+    1. List of detections: [{...}, {...}, ...]
+    2. Dict with 'annotations': {"annotations": [{...}, ...]}
+    3. Dict with frame keys: {"frame_0001": [{...}], ...}
+
+    Each detection can have various key names:
+    - Image ID: image_id, imgname, image, name, file_name, frame, frame_id
+    - Keypoints: keypoints, pose_keypoints_2d, keypoints_2d
+    - Bbox: box, bbox (format: [x, y, w, h])
+    - Score: score
     """
 
     def __init__(self, config: TrackerConfig):
@@ -508,46 +626,37 @@ class AlphaPoseParser:
         with open(json_path, "r") as f:
             data = json.load(f)
 
-        if not isinstance(data, list):
-            raise ValueError(f"Expected JSON to be a list of detections, got {type(data)}")
-
         # Group by frame
         frame_detections: Dict[int, List[Detection]] = defaultdict(list)
         skipped = 0
+        total_entries = 0
 
-        for idx, entry in enumerate(data):
+        for idx, entry in enumerate(iter_entries_from_json(data)):
+            total_entries += 1
+
             # Extract frame number from image_id
-            image_id = entry.get("image_id", str(idx))
+            image_id = get_image_id_from_entry(entry, fallback=str(idx))
             frame_id = extract_frame_number(image_id)
 
-            # Parse bounding box [x, y, w, h] -> [x1, y1, x2, y2]
-            box = entry.get("box", None)
-            if box is None or len(box) < 4:
+            # Parse bounding box
+            bbox = get_bbox_from_entry(entry)
+            if bbox is None:
                 skipped += 1
                 continue
 
-            # Handle both [x, y, w, h] and [x1, y1, x2, y2] formats
-            # AlphaPose uses [x, y, w, h] format
-            x, y, w, h = box[0], box[1], box[2], box[3]
-            if w > 0 and h > 0:  # Standard [x, y, w, h] format
-                bbox = np.array([x, y, x + w, y + h], dtype=np.float32)
-            else:  # Already [x1, y1, x2, y2] or invalid
-                bbox = np.array([x, y, w, h], dtype=np.float32)
-                # Ensure x2 > x1 and y2 > y1
-                if bbox[2] <= bbox[0] or bbox[3] <= bbox[1]:
-                    skipped += 1
-                    continue
-
-            # Parse keypoints (flattened list) -> [num_keypoints, 3]
-            kpts_flat = entry.get("keypoints", [])
-            if len(kpts_flat) < 3:
+            # Validate bbox
+            if bbox[2] <= bbox[0] or bbox[3] <= bbox[1]:
                 skipped += 1
                 continue
 
-            num_kpts = len(kpts_flat) // 3
-            keypoints = np.array(kpts_flat, dtype=np.float32).reshape(num_kpts, 3)
+            # Parse keypoints
+            keypoints = get_keypoints_from_entry(entry)
+            if keypoints is None or keypoints.shape[0] < 3:
+                skipped += 1
+                continue
 
             # Pad or truncate to expected number of keypoints (136 for Halpe)
+            num_kpts = keypoints.shape[0]
             if num_kpts < self.config.num_keypoints:
                 padding = np.zeros((self.config.num_keypoints - num_kpts, 3), dtype=np.float32)
                 keypoints = np.vstack([keypoints, padding])
@@ -555,16 +664,14 @@ class AlphaPoseParser:
                 keypoints = keypoints[:self.config.num_keypoints]
 
             # Detection score
-            score = entry.get("score", 0.5)
-            if isinstance(score, (list, tuple)):
-                score = score[0] if score else 0.5
+            score = get_score_from_entry(entry)
 
             detection = Detection(
                 frame_id=frame_id,
                 detection_id=len(frame_detections[frame_id]),
                 bbox=bbox,
                 keypoints=keypoints,
-                score=float(score)
+                score=score
             )
 
             frame_detections[frame_id].append(detection)
@@ -574,7 +681,7 @@ class AlphaPoseParser:
             frame_detections[frame_id].sort(key=lambda d: d.score, reverse=True)
 
         total_detections = sum(len(v) for v in frame_detections.values())
-        logger.info(f"Parsed {total_detections} detections across {len(frame_detections)} frames")
+        logger.info(f"Parsed {total_detections} detections from {total_entries} entries across {len(frame_detections)} frames")
         if skipped > 0:
             logger.warning(f"Skipped {skipped} invalid entries")
 
