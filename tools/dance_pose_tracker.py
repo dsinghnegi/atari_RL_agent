@@ -14,12 +14,41 @@ Key Features:
 
 Designed for batch processing on Jetson Orin 32GB with PyTorch 2.3+
 
+Expected AlphaPose JSON Format (merged single file with 136 keypoints):
+    [
+        {
+            "image_id": "frame_0001.png",   # Frame identifier (number extracted)
+            "category_id": 1,                # Person category
+            "keypoints": [x1,y1,c1, x2,y2,c2, ...],  # Flattened: 136*3 = 408 values
+            "score": 0.85,                   # Detection confidence
+            "box": [x, y, width, height],    # Bounding box (x,y is top-left)
+            "idx": [0.0]                     # Person index in frame (optional)
+        },
+        ...
+    ]
+
+Halpe-136 Keypoint Layout:
+    - Body (26 keypoints): 0-25
+      0: Nose, 1-2: Eyes, 3-4: Ears, 5-6: Shoulders, 7-8: Elbows,
+      9-10: Wrists, 11-12: Hips, 13-14: Knees, 15-16: Ankles,
+      17: Head, 18: Neck, 19-20: Hip centers, 21-22: Feet, 23-24: Toes, 25: Spine
+    - Face (68 keypoints): 26-93
+    - Left Hand (21 keypoints): 94-114
+    - Right Hand (21 keypoints): 115-135
+
 Usage:
     python dance_pose_tracker.py \
-        --alphapose-json /path/to/alphapose_results.json \
+        --alphapose-json /path/to/pose_full_136.json \
         --video /path/to/video.mp4 \
         --output-dir /path/to/output \
         --num-dancers 8
+
+Setup for Jetson Orin (with PyTorch 2.3 already installed):
+    pip install opencv-python numpy scipy
+    # Optional for deep features:
+    pip install torchvision
+    # Optional for face embeddings:
+    pip install insightface onnxruntime-gpu
 
 Author: Generated for dance video tracking pipeline
 """
@@ -410,11 +439,32 @@ def temporal_overlap(t1_start: int, t1_end: int, t2_start: int, t2_end: int) -> 
 
 
 def extract_frame_number(image_id: str) -> int:
-    """Extract frame number from AlphaPose image_id string."""
-    # Handle various formats: "frame_123.png", "123.jpg", "frame123", etc.
-    match = re.search(r'(\d+)', image_id)
-    if match:
-        return int(match.group(1))
+    """
+    Extract frame number from AlphaPose image_id string.
+
+    Handles various formats:
+    - "frame_0001.png" -> 1
+    - "frame0001.jpg" -> 1
+    - "0001.png" -> 1
+    - "dance_video_frame_123.png" -> 123
+    - Just a number string "42" -> 42
+    """
+    if not image_id:
+        return 0
+
+    # Try to find the last sequence of digits (most likely the frame number)
+    # This handles cases like "video_001_frame_0042.png" -> 42
+    matches = re.findall(r'(\d+)', image_id)
+    if matches:
+        # Use the last number found (usually the frame number)
+        # But if it looks like "frame_XXXX", use that number
+        if 'frame' in image_id.lower():
+            # Find number right after "frame"
+            frame_match = re.search(r'frame[_\-]?(\d+)', image_id, re.IGNORECASE)
+            if frame_match:
+                return int(frame_match.group(1))
+        # Otherwise use the last number
+        return int(matches[-1])
     return 0
 
 
@@ -423,7 +473,22 @@ def extract_frame_number(image_id: str) -> int:
 # =============================================================================
 
 class AlphaPoseParser:
-    """Parse AlphaPose JSON output into Detection objects."""
+    """
+    Parse AlphaPose JSON output into Detection objects.
+
+    Expected JSON format (merged single file):
+    [
+        {
+            "image_id": "frame_0001.png",  # or "0001.jpg", etc.
+            "category_id": 1,
+            "keypoints": [x1,y1,c1, x2,y2,c2, ...],  # flattened, 136*3=408 values
+            "score": 0.85,
+            "box": [x, y, width, height],  # top-left x,y and dimensions
+            "idx": [0.0]  # optional person index
+        },
+        ...
+    ]
+    """
 
     def __init__(self, config: TrackerConfig):
         self.config = config
@@ -432,55 +497,99 @@ class AlphaPoseParser:
         """
         Parse AlphaPose JSON file.
 
+        Args:
+            json_path: Path to the merged AlphaPose JSON file (e.g., pose_full_136.json)
+
         Returns:
-            Dict mapping frame_id to list of Detection objects
+            Dict mapping frame_id to list of Detection objects, sorted by frame
         """
         logger.info(f"Parsing AlphaPose results from {json_path}")
 
         with open(json_path, "r") as f:
             data = json.load(f)
 
+        if not isinstance(data, list):
+            raise ValueError(f"Expected JSON to be a list of detections, got {type(data)}")
+
         # Group by frame
         frame_detections: Dict[int, List[Detection]] = defaultdict(list)
+        skipped = 0
 
         for idx, entry in enumerate(data):
-            frame_id = extract_frame_number(entry.get("image_id", str(idx)))
+            # Extract frame number from image_id
+            image_id = entry.get("image_id", str(idx))
+            frame_id = extract_frame_number(image_id)
 
             # Parse bounding box [x, y, w, h] -> [x1, y1, x2, y2]
-            box = entry.get("box", [0, 0, 0, 0])
-            bbox = np.array([
-                box[0],
-                box[1],
-                box[0] + box[2],
-                box[1] + box[3]
-            ], dtype=np.float32)
+            box = entry.get("box", None)
+            if box is None or len(box) < 4:
+                skipped += 1
+                continue
+
+            # Handle both [x, y, w, h] and [x1, y1, x2, y2] formats
+            # AlphaPose uses [x, y, w, h] format
+            x, y, w, h = box[0], box[1], box[2], box[3]
+            if w > 0 and h > 0:  # Standard [x, y, w, h] format
+                bbox = np.array([x, y, x + w, y + h], dtype=np.float32)
+            else:  # Already [x1, y1, x2, y2] or invalid
+                bbox = np.array([x, y, w, h], dtype=np.float32)
+                # Ensure x2 > x1 and y2 > y1
+                if bbox[2] <= bbox[0] or bbox[3] <= bbox[1]:
+                    skipped += 1
+                    continue
 
             # Parse keypoints (flattened list) -> [num_keypoints, 3]
             kpts_flat = entry.get("keypoints", [])
+            if len(kpts_flat) < 3:
+                skipped += 1
+                continue
+
             num_kpts = len(kpts_flat) // 3
             keypoints = np.array(kpts_flat, dtype=np.float32).reshape(num_kpts, 3)
 
-            # Pad or truncate to expected number of keypoints
+            # Pad or truncate to expected number of keypoints (136 for Halpe)
             if num_kpts < self.config.num_keypoints:
                 padding = np.zeros((self.config.num_keypoints - num_kpts, 3), dtype=np.float32)
                 keypoints = np.vstack([keypoints, padding])
             elif num_kpts > self.config.num_keypoints:
                 keypoints = keypoints[:self.config.num_keypoints]
 
+            # Detection score
             score = entry.get("score", 0.5)
+            if isinstance(score, (list, tuple)):
+                score = score[0] if score else 0.5
 
             detection = Detection(
                 frame_id=frame_id,
                 detection_id=len(frame_detections[frame_id]),
                 bbox=bbox,
                 keypoints=keypoints,
-                score=score
+                score=float(score)
             )
 
             frame_detections[frame_id].append(detection)
 
-        logger.info(f"Parsed {sum(len(v) for v in frame_detections.values())} detections "
-                   f"across {len(frame_detections)} frames")
+        # Sort detections within each frame by score (highest first)
+        for frame_id in frame_detections:
+            frame_detections[frame_id].sort(key=lambda d: d.score, reverse=True)
+
+        total_detections = sum(len(v) for v in frame_detections.values())
+        logger.info(f"Parsed {total_detections} detections across {len(frame_detections)} frames")
+        if skipped > 0:
+            logger.warning(f"Skipped {skipped} invalid entries")
+
+        # Log frame range
+        if frame_detections:
+            frames = sorted(frame_detections.keys())
+            logger.info(f"Frame range: {frames[0]} to {frames[-1]}")
+
+            # Check for gaps
+            expected_frames = set(range(frames[0], frames[-1] + 1))
+            missing = expected_frames - set(frames)
+            if missing and len(missing) < 100:
+                logger.warning(f"Missing {len(missing)} frames: {sorted(missing)[:10]}...")
+            elif missing:
+                logger.warning(f"Missing {len(missing)} frames in range")
 
         return dict(frame_detections)
 
@@ -1713,21 +1822,42 @@ class TrackingVisualizer:
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Dance Pose Tracker - Track multiple dancers using AlphaPose outputs",
+        description="Dance Pose Tracker - Track multiple dancers using AlphaPose 136-keypoint outputs",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
+Expected JSON Format:
+  The AlphaPose JSON should be a merged file containing all frames:
+  [
+    {"image_id": "frame_0001.png", "box": [x, y, w, h], "keypoints": [...], "score": 0.85},
+    ...
+  ]
+
+  Each entry has:
+    - image_id: frame filename (frame number extracted automatically)
+    - box: [x, y, width, height] bounding box
+    - keypoints: flattened [x1,y1,c1, x2,y2,c2, ...] for 136 keypoints (408 values)
+    - score: detection confidence
+
 Examples:
-  # Basic usage with AlphaPose JSON
-  python dance_pose_tracker.py --alphapose-json results.json --output-dir ./output
+  # Basic usage with AlphaPose JSON (pose-only tracking, no video needed)
+  python dance_pose_tracker.py --alphapose-json pose_full_136.json --output-dir ./output
 
-  # With video for feature extraction
-  python dance_pose_tracker.py --alphapose-json results.json --video dance.mp4 --output-dir ./output
+  # With video for appearance-based feature extraction (recommended)
+  python dance_pose_tracker.py --alphapose-json pose_full_136.json --video dance.mp4 --output-dir ./output
 
-  # Specify number of dancers
-  python dance_pose_tracker.py --alphapose-json results.json --video dance.mp4 --num-dancers 8
+  # Specify known number of dancers for better clustering
+  python dance_pose_tracker.py --alphapose-json pose_full_136.json --video dance.mp4 --num-dancers 8
 
-  # Generate visualization video
-  python dance_pose_tracker.py --alphapose-json results.json --video dance.mp4 --visualize
+  # Generate visualization video with tracking overlays
+  python dance_pose_tracker.py --alphapose-json pose_full_136.json --video dance.mp4 --visualize
+
+  # Use histogram features only (no deep learning, faster on CPU)
+  python dance_pose_tracker.py --alphapose-json pose_full_136.json --no-deep-features
+
+Jetson Orin Setup (PyTorch 2.3 already installed):
+  pip install opencv-python numpy scipy
+  pip install torchvision  # for deep body features
+  pip install insightface onnxruntime-gpu  # for face embeddings (optional)
         """
     )
 
